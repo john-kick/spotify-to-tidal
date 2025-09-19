@@ -10,7 +10,7 @@ const STATE_COOKIE_KEY = "spotify_auth_state";
 const TOKEN_COOKIE_KEY = "spotify_access_token";
 const CODE_VERIFIER_KEY = "tidal_code_verifier";
 
-export async function authorize(req: Request, res: Response): Promise<void> {
+export async function authorize(req: Request, res: Response) {
   if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
     return res.status(500).send("Configuration incomplete");
   }
