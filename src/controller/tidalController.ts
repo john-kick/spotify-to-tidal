@@ -1,4 +1,5 @@
 import { generateRandomString, generateS256challenge } from "@/util";
+import { sleep } from "bun";
 import type { Request, Response } from "express";
 
 const CLIENT_ID = process.env.TIDAL_CLIENT_ID;
@@ -6,6 +7,7 @@ const CLIENT_SECRET = process.env.TIDAL_CLIENT_SECRET;
 const REDIRECT_URI = process.env.TIDAL_REDIRECT_URI;
 const AUTHORIZATION_ENDPOINT = "https://login.tidal.com/authorize";
 const TOKEN_ENDPOINT = "https://auth.tidal.com/v1/oauth2/token";
+const API_ENDPOINT = "https://openapi.tidal.com/v2";
 const STATE_COOKIE_KEY = "tidal_auth_state";
 const TOKEN_COOKIE_KEY = "tidal_access_token";
 const CODE_VERIFIER_KEY = "tidal_code_verifier";
@@ -106,4 +108,47 @@ export async function callback(req: Request, res: Response) {
   });
 
   res.redirect("/");
+}
+
+export async function getLikedPlaylist(req: Request, res: Response) {
+  try {
+    const token = req.cookies[TOKEN_COOKIE_KEY];
+    const userID = await getUserID(token);
+
+    let hasNext = false;
+    let nextLink = `${API_ENDPOINT}/userCollections/${userID}/relationships/tracks`;
+    let allTracks = [];
+    let counter = 0;
+
+    do {
+      console.log(`Page ${++counter} (link ${nextLink}) ...`);
+      const response = await fetch(
+        nextLink,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      await sleep(500); // Sleep to avoid 429
+      console.log(response);
+      const { data, links } = await response.json();
+
+      allTracks = allTracks.concat(data);
+      hasNext = links.next !== undefined;
+      nextLink = API_ENDPOINT + links.next;
+    } while (hasNext);
+    res.status(200).json(allTracks);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+}
+
+async function getUserID(token: string): Promise<number> {
+  const response = await fetch(`${API_ENDPOINT}/users/me`, {
+    headers: {"Authorization": `Bearer ${token}`}
+  });
+  const result = await response.json();
+  return result.data.id;
 }
