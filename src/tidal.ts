@@ -15,7 +15,7 @@ export async function authorize(req: Request, res: Response) {
     return res.status(500).send("Configuration incomplete");
   }
 
-  const scope = "collection.read collection.write playlist.read playlist.write";
+  const scope = "collection.read collection.write playlists.read playlists.write";
 
   const { codeChallenge, codeVerifier } = await generateS256challenge();
   res.cookie(CODE_VERIFIER_KEY, codeVerifier);
@@ -27,7 +27,7 @@ export async function authorize(req: Request, res: Response) {
     response_type: "code",
     client_id: CLIENT_ID,
     redirect_uri: REDIRECT_URI,
-    scope,
+    scope: scope,
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
     state
