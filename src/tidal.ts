@@ -3,14 +3,18 @@ import { generateRandomString, generateS256challenge } from "./util";
 
 const CLIENT_ID = process.env.TIDAL_CLIENT_ID;
 const CLIENT_SECRET = process.env.TIDAL_CLIENT_SECRET;
+const REDIRECT_URI = process.env.TIDAL_REDIRECT_URI;
 const AUTHORIZATION_ENDPOINT = "https://login.tidal.com/authorize";
 const TOKEN_ENDPOINT = "https://auth.tidal.com/v1/oauth2/token";
-const REDIRECT_URI = "http://localhost:8080/tidal/callback";
 const STATE_COOKIE_KEY = "spotify_auth_state";
 const TOKEN_COOKIE_KEY = "spotify_access_token";
 const CODE_VERIFIER_KEY = "tidal_code_verifier";
 
 export async function authorize(req: Request, res: Response): Promise<void> {
+  if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+    return res.status(500).send("Configuration incomplete");
+  }
+
   const scope = "collection.read collection.write playlist.read playlist.write";
 
   const { codeChallenge, codeVerifier } = await generateS256challenge();

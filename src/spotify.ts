@@ -3,15 +3,15 @@ import { generateRandomString } from "./util";
 
 const AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";
 const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
-const REDIRECT_URI = "http://127.0.0.1:8080/spotify/callback";
+const REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI;
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 const STATE_COOKIE_KEY = "spotify_auth_state";
 const TOKEN_COOKIE_KEY = "spotify_access_token";
 
 export function authorize(_req: Request, res: Response): void {
-  if (!CLIENT_ID || !CLIENT_SECRET) {
-    res.status(500).send("Missing client id or client secret");
+  if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+    res.status(500).send("Configuration incomplete");
   }
 
   const state = generateRandomString();
