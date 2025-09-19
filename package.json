@@ -1,0 +1,23 @@
+{
+  "name": "spotify-to-tidal",
+  "module": "server.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/express": "^5.0.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "start": "bun run src/server.ts",
+    "build": "tsc",
+    "dev": "bun run --watch src/server.ts"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "js-sha256": "^0.11.1"
+  }
+}

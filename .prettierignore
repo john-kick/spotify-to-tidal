@@ -1,0 +1,6 @@
+tsconfig.json
+package.json
+package-lock.json
+.env
+.gitignore
+/dist
