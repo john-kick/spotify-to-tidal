@@ -29,7 +29,12 @@
 
     // Source maps
     "sourceMap": true,
-    "inlineSources": true
+    "inlineSources": true,
+		
+		"paths": {
+      "@/*": ["./src/*"]
+    }
+		
   },
   // "outDir": "dist",
   "include": ["src"],

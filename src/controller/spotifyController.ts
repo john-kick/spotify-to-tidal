@@ -1,6 +1,5 @@
+import { generateRandomString } from "@/util";
 import { type Request, type Response } from "express";
-import { generateRandomString } from "./util";
-import { isEmptyBindingElement } from "typescript";
 
 interface SpotifySong {
   id: string;
@@ -117,7 +116,7 @@ export async function getLikedSongs(token: string): Promise<SpotifySong[]> {
   console.log("Fetching liked songs from Spotify...");
 
   while (hasNext) {
-    console.log(`Page ${offset/limit+1}...`)
+    console.log(`Page ${offset / limit + 1}...`);
     const queryString = `limit=${limit}&offset=${offset}`;
     const response = await fetch(`${API_URL}/me/tracks?${queryString}`, {
       headers: {

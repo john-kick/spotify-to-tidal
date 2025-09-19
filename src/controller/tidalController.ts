@@ -1,5 +1,5 @@
+import { generateRandomString, generateS256challenge } from "@/util";
 import type { Request, Response } from "express";
-import { generateRandomString, generateS256challenge } from "./util";
 
 const CLIENT_ID = process.env.TIDAL_CLIENT_ID;
 const CLIENT_SECRET = process.env.TIDAL_CLIENT_SECRET;
@@ -15,7 +15,8 @@ export async function authorize(req: Request, res: Response) {
     return res.status(500).send("Configuration incomplete");
   }
 
-  const scope = "collection.read collection.write playlists.read playlists.write";
+  const scope =
+    "collection.read collection.write playlists.read playlists.write";
 
   const { codeChallenge, codeVerifier } = await generateS256challenge();
   res.cookie(CODE_VERIFIER_KEY, codeVerifier);
