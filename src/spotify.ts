@@ -23,7 +23,7 @@ export function authorize(_req: Request, res: Response): void {
     client_secret: CLIENT_SECRET,
     scope: "user-read-private user-read-email",
     redirect_uri: REDIRECT_URI,
-    state,
+    state
   };
 
   const queryString = Object.entries(queryParams)
@@ -53,14 +53,14 @@ export async function callback(req: Request, res: Response) {
       .json({ message: "Code was not delivered with callback" });
   }
 
-  if (!CLIENT_ID || !CLIENT_SECRET) {
-    return res.status(500).send("Missing client id or client secret");
+  if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+    return res.status(500).send("Configuration incomplete");
   }
 
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code: code as string,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: REDIRECT_URI
   });
 
   const encodedClientCreds = Buffer.from(
@@ -69,14 +69,14 @@ export async function callback(req: Request, res: Response) {
 
   const headers = {
     Authorization: `Basic ${encodedClientCreds}`,
-    "Content-Type": "application/x-www-form-urlencoded",
+    "Content-Type": "application/x-www-form-urlencoded"
   };
 
   try {
     const response = await fetch(TOKEN_ENDPOINT, {
       method: "POST",
       headers,
-      body: body.toString(),
+      body: body.toString()
     });
 
     if (!response.ok) {
@@ -91,7 +91,7 @@ export async function callback(req: Request, res: Response) {
     res.cookie(TOKEN_COOKIE_KEY, access_token, {
       httpOnly: true,
       secure: true,
-      maxAge: expires_in * 1000,
+      maxAge: expires_in * 1000
     });
 
     res.redirect("/");
