@@ -117,19 +117,16 @@ export async function getLikedPlaylist(req: Request, res: Response) {
 
     let hasNext = false;
     let nextLink = `${API_ENDPOINT}/userCollections/${userID}/relationships/tracks`;
-    let allTracks = [];
+    let allTracks: unknown[] = [];
     let counter = 0;
 
     do {
       console.log(`Page ${++counter} (link ${nextLink}) ...`);
-      const response = await fetch(
-        nextLink,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+      const response = await fetch(nextLink, {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      );
+      });
       await sleep(500); // Sleep to avoid 429
       console.log(response);
       const { data, links } = await response.json();
@@ -147,8 +144,26 @@ export async function getLikedPlaylist(req: Request, res: Response) {
 
 async function getUserID(token: string): Promise<number> {
   const response = await fetch(`${API_ENDPOINT}/users/me`, {
-    headers: {"Authorization": `Bearer ${token}`}
+    headers: { Authorization: `Bearer ${token}` }
   });
   const result = await response.json();
   return result.data.id;
+}
+
+export async function findTrack(req: Request, res: Response) {
+  try {
+    const { isrc } = req.query;
+
+    if (!isrc) {
+      return res.status(400).json({ message: "ISRC must be given" });
+    }
+
+    const queryString = `filter[isrc]=${isrc}`;
+    const response = await fetch(`${API_ENDPOINT}/tracks?${queryString}`);
+    const result = await response.json();
+
+    res.status(200).json(result);
+  } catch (err) {
+    res.status(500).json(err);
+  }
 }

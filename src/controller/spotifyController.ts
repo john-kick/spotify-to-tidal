@@ -5,6 +5,7 @@ interface SpotifySong {
   id: string;
   title: string;
   artist: string;
+  isrc: string;
 }
 
 const AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";

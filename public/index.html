@@ -15,6 +15,29 @@
     <a href="/spotify/likedsongs"
       ><button id="fetch-likes">Fetch Liked Songs</button></a
     >
+
+    <form id="isrc-form">
+      <label for="isrc">Enter ISRC code:</label><br />
+      <input type="text" id="isrc" name="isrc" /><br />
+      <input type="submit" value="Submit" />
+    </form>
     <script src="scripts.js"></script>
+    <script>
+      document
+        .getElementById("isrc-form")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+          const isrc = document.getElementById("isrc").value;
+          fetch(`/tidal/track?isrc=${encodeURIComponent(isrc)}`)
+            .then((response) => response.json())
+            .then((data) => {
+              console.log("Search results:", data);
+              // Handle the search results as needed
+            })
+            .catch((error) => {
+              console.error("Error fetching search results:", error);
+            });
+        });
+    </script>
   </body>
 </html>
