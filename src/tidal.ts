@@ -6,8 +6,8 @@ const CLIENT_SECRET = process.env.TIDAL_CLIENT_SECRET;
 const REDIRECT_URI = process.env.TIDAL_REDIRECT_URI;
 const AUTHORIZATION_ENDPOINT = "https://login.tidal.com/authorize";
 const TOKEN_ENDPOINT = "https://auth.tidal.com/v1/oauth2/token";
-const STATE_COOKIE_KEY = "spotify_auth_state";
-const TOKEN_COOKIE_KEY = "spotify_access_token";
+const STATE_COOKIE_KEY = "tidal_auth_state";
+const TOKEN_COOKIE_KEY = "tidal_access_token";
 const CODE_VERIFIER_KEY = "tidal_code_verifier";
 
 export async function authorize(req: Request, res: Response) {

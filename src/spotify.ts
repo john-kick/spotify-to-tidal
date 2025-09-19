@@ -1,13 +1,21 @@
 import { type Request, type Response } from "express";
 import { generateRandomString } from "./util";
+import { isEmptyBindingElement } from "typescript";
+
+interface SpotifySong {
+  id: string;
+  title: string;
+  artist: string;
+}
 
 const AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";
 const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
+const API_URL = "https://api.spotify.com/v1";
 const REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI;
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 const STATE_COOKIE_KEY = "spotify_auth_state";
-const TOKEN_COOKIE_KEY = "spotify_access_token";
+export const TOKEN_COOKIE_KEY = "spotify_access_token";
 
 export function authorize(_req: Request, res: Response): void {
   if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
@@ -21,7 +29,7 @@ export function authorize(_req: Request, res: Response): void {
     response_type: "code",
     client_id: CLIENT_ID,
     client_secret: CLIENT_SECRET,
-    scope: "user-read-private user-read-email",
+    scope: "user-read-private user-read-email user-library-read",
     redirect_uri: REDIRECT_URI,
     state
   };
@@ -98,4 +106,45 @@ export async function callback(req: Request, res: Response) {
   } catch (err) {
     res.status(500).json({ message: "Token request failed", error: err });
   }
+}
+
+export async function getLikedSongs(token: string): Promise<SpotifySong[]> {
+  const limit = 50; // Spotify max limit per request
+  let offset = 0;
+  let allTracks: SpotifySong[] = [];
+  let hasNext = true;
+
+  console.log("Fetching liked songs from Spotify...");
+
+  while (hasNext) {
+    console.log(`Page ${offset/limit+1}...`)
+    const queryString = `limit=${limit}&offset=${offset}`;
+    const response = await fetch(`${API_URL}/me/tracks?${queryString}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error("Failed to fetch liked songs: " + errorBody);
+    }
+
+    const data = await response.json();
+    const items = data.items || [];
+
+    // Map to SpotifySong interface
+    const tracks: SpotifySong[] = items.map((item: any) => ({
+      id: item.track.id,
+      title: item.track.name,
+      artist: item.track.artists.map((a: any) => a.name).join(", ")
+    }));
+
+    allTracks = allTracks.concat(tracks);
+
+    hasNext = !!data.next;
+    offset += limit;
+  }
+
+  return allTracks;
 }
