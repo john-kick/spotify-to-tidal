@@ -26,7 +26,6 @@ export async function authorize(req: Request, res: Response) {
   const queryParams = {
     response_type: "code",
     client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
     redirect_uri: REDIRECT_URI,
     scope,
     code_challenge_method: "S256",
@@ -35,7 +34,10 @@ export async function authorize(req: Request, res: Response) {
   };
 
   const encodedQuery = Object.entries(queryParams)
-    .map(([key, value]) => `${key}=${value}`)
+    .map(
+      ([key, value]) =>
+        `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+    )
     .join("&");
 
   res.redirect(`${AUTHORIZATION_ENDPOINT}?${encodedQuery}`);
@@ -60,8 +62,8 @@ export async function callback(req: Request, res: Response) {
       .json({ message: "Code was not delivered with callback" });
   }
 
-  if (!CLIENT_ID || !CLIENT_SECRET) {
-    return res.status(500).send("Missing client id or client secret");
+  if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
+    return res.status(500).send("Configuration incomplete");
   }
 
   // Get token
@@ -69,21 +71,30 @@ export async function callback(req: Request, res: Response) {
   if (!codeVerifier) {
     return res.status(500).json({ message: "Could not verify received code" });
   }
-  localStorage.removeItem(CODE_VERIFIER_KEY);
 
-  const body = {
+  const body = new URLSearchParams({
     grant_type: "authorization_code",
     client_id: CLIENT_ID,
     client_secret: CLIENT_SECRET,
-    code,
+    code: code as string,
     redirect_uri: REDIRECT_URI,
     code_verifier: codeVerifier
-  };
+  });
 
   const response = await fetch(TOKEN_ENDPOINT, {
     method: "POST",
-    body: JSON.stringify(body)
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: body.toString()
   });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    return res
+      .status(response.status)
+      .json({ message: "Could not get access token", details: errorBody });
+  }
 
   const { access_token, expires_in } = await response.json();
 
