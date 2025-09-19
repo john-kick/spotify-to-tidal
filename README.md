@@ -35,19 +35,7 @@ A web application to help you authenticate with both Spotify and Tidal, enabling
 
 3. **Configure environment variables:**
 
-   Copy `.env` and fill in your credentials (already present in this repo):
-
-   ```
-   PORT=8080
-
-   # Spotify API info
-   SPOTIFY_CLIENT_ID="your_spotify_client_id"
-   SPOTIFY_CLIENT_SECRET="your_spotify_client_secret"
-
-   # Tidal API credentials
-   TIDAL_CLIENT_ID="your_tidal_client_id"
-   TIDAL_CLIENT_SECRET="your_tidal_client_secret"
-   ```
+   Copy `.env.example`, rename it to `.env` and fill in your credentials
 
 4. **Build the project:**
 
