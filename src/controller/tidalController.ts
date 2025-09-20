@@ -5,6 +5,7 @@ import type { Request, Response } from "express";
 const CLIENT_ID = process.env.TIDAL_CLIENT_ID;
 const CLIENT_SECRET = process.env.TIDAL_CLIENT_SECRET;
 const REDIRECT_URI = process.env.TIDAL_REDIRECT_URI;
+console.log(CLIENT_SECRET);
 const AUTHORIZATION_ENDPOINT = "https://login.tidal.com/authorize";
 const TOKEN_ENDPOINT = "https://auth.tidal.com/v1/oauth2/token";
 const API_ENDPOINT = "https://openapi.tidal.com/v2";
@@ -17,8 +18,15 @@ export async function authorize(req: Request, res: Response) {
     return res.status(500).send("Configuration incomplete");
   }
 
-  const scope =
-    "collection.read collection.write playlists.read playlists.write";
+  const scopes = [
+    "collection.read",
+    "collection.write",
+    "playlists.read",
+    "playlists.write",
+    "search.read",
+    "search.write"
+  ];
+  const scope = scopes.join(" ");
 
   const { codeChallenge, codeVerifier } = await generateS256challenge();
   res.cookie(CODE_VERIFIER_KEY, codeVerifier);
@@ -158,8 +166,11 @@ export async function findTrack(req: Request, res: Response) {
       return res.status(400).json({ message: "ISRC must be given" });
     }
 
+    const token = req.cookies[TOKEN_COOKIE_KEY];
     const queryString = `filter[isrc]=${isrc}`;
-    const response = await fetch(`${API_ENDPOINT}/tracks?${queryString}`);
+    const response = await fetch(`${API_ENDPOINT}/tracks?${queryString}`, {
+      headers: {"Authorization": `Bearer ${token}`}
+    });
     const result = await response.json();
 
     res.status(200).json(result);

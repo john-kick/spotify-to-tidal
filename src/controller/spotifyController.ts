@@ -137,7 +137,8 @@ export async function getLikedSongs(token: string): Promise<SpotifySong[]> {
     const tracks: SpotifySong[] = items.map((item: any) => ({
       id: item.track.id,
       title: item.track.name,
-      artist: item.track.artists.map((a: any) => a.name).join(", ")
+      artist: item.track.artists.map((a: any) => a.name).join(", "),
+      isrc: item.track.external_ids.isrc
     }));
 
     allTracks = allTracks.concat(tracks);
