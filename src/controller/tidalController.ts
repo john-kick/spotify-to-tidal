@@ -1,4 +1,3 @@
-
 import { generateRandomString, generateS256challenge } from "@/util";
 import { sleep } from "bun";
 import type { Request, Response } from "express";
@@ -8,6 +7,7 @@ export interface TidalTrack {}
 const CLIENT_ID = process.env.TIDAL_CLIENT_ID;
 const CLIENT_SECRET = process.env.TIDAL_CLIENT_SECRET;
 const REDIRECT_URI = process.env.TIDAL_REDIRECT_URI;
+const COUNTRY_CODE = process.env.COUNTRY_CODE || "DE";
 const AUTHORIZATION_ENDPOINT = "https://login.tidal.com/authorize";
 const TOKEN_ENDPOINT = "https://auth.tidal.com/v1/oauth2/token";
 const API_ENDPOINT = "https://openapi.tidal.com/v2";
@@ -113,6 +113,56 @@ export async function callback(req: Request, res: Response) {
   res.redirect("/");
 }
 
+export async function addTrackToLikedTracks(req: Request, res: Response) {
+  const { isrc } = req.body;
+
+  const token = req.cookies[TOKEN_COOKIE_KEY];
+  const userID = await getUserID(token);
+
+  const songResponse = await fetch(`${API_ENDPOINT}/tracks?filter[isrc]=${isrc}`, {
+    headers: {"Authorization": `Bearer ${token}`}
+  });
+  const songResult = await songResponse.json();
+
+  if (!songResponse.ok) {
+    res.status(songResponse.status).send(songResponse.statusText);
+    return;
+  }
+
+  const songData = songResult.data;
+  if (songData.length === 0) {
+    res.status(404).send("Track not found");
+    return;
+  }
+
+  const songID = songData[0].id as string;
+  console.log(COUNTRY_CODE, userID, songID);
+
+  const body = {data: [{id: songID, type: "tracks"}]};
+  console.log(token);
+  fetch(`${API_ENDPOINT}/userCollections/${userID}/relationships/tracks?countryCode=${COUNTRY_CODE}`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "accept": "application/vnd.tidal.v1+json",
+      "Content-Type": "application/vnd.tidal.v1+json"
+    },
+    body: JSON.stringify(body)
+  })
+    .then(response => {console.log(response);return response.json()})
+    .then((data) => {
+      if (data.errors) {
+        res.status(400).json(data.errors);
+        return;
+      }
+      res.status(200).json(data);
+    })
+    .catch(err => {
+      console.error(err);
+      res.status(500).json(err);
+    });
+}
+
 export async function getLikedPlaylist(req: Request, res: Response) {
   try {
     const token = req.cookies[TOKEN_COOKIE_KEY];
@@ -131,7 +181,6 @@ export async function getLikedPlaylist(req: Request, res: Response) {
         }
       });
       await sleep(500); // Sleep to avoid 429
-      console.log(response);
       const { data, links } = await response.json();
 
       allTracks = allTracks.concat(data);
@@ -183,10 +232,14 @@ export async function getTracksFromISRC(
   // Request chunks of 5 tracks
   let allTrackIDs: string[] = [];
 
+  console.log(`Get ${isrc.length} tracks from Tidal...`);
+  let chunkCounter = 0;
   while (isrc.length > 0) {
-    const chunk = isrc.splice(0, 4);
+    console.log(`Chunk ${++chunkCounter}...`);
+    const chunk = isrc.splice(0, 20);
 
-    const queryString = chunk.map((val) => `filter[isrc]=${val}`).join("&");
+    const queryString = chunk.map((val) => `filter[isrc]=${val.toUpperCase()}`).join("&");
+    console.log(queryString);
     const response = await fetch(`${API_ENDPOINT}/tracks?${queryString}`, {
       headers: {
         Authorization: `Bearer ${token}`
@@ -202,3 +255,35 @@ export async function getTracksFromISRC(
 
   return allTrackIDs;
 }
+
+export async function addTracksToLikedSongs(trackIDs: string[], token: string): void {
+  console.log(`Adding ${trackIDs.length} tracks to liked songs...`);
+  const userID = await getUserID(token);
+
+  // Sync tracks in chunks of 20
+  let chunkCounter = 0;
+  while (trackIDs.length > 0) {
+    console.log(`Processing chunk ${++chunkCounter}...`);
+    const chunk = trackIDs.splice(0, 20);
+
+    const body = {
+      data: trackIDs.map((trackID) => {return {"id": trackID, "type": "tracks"};})
+    };
+
+    const response = await fetch(`${API_ENDPOINT}/userCollections/${userID}/relationships/tracks`, {
+      method: "POST",
+      headers: {"Authorization": `Bearer ${token}`},
+      body: JSON.stringify(body)
+    });
+
+    const result = await response.json();
+    if (result > 299) {
+      result.errors.forEach((error) => {
+        console.error(`Error: ${error.detail} (${error.code})`);
+      });
+    } else {
+      console.log("OK");
+    }
+  }
+}
+

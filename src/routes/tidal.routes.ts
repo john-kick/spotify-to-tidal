@@ -2,7 +2,8 @@ import {
   authorize,
   callback,
   getLikedPlaylist,
-  findTrack
+  findTrack,
+  addTrackToLikedTracks
 } from "@/controller/tidalController";
 import { Router } from "express";
 
@@ -12,5 +13,7 @@ router.get("/auth", authorize);
 router.get("/callback", callback);
 router.get("/likedplaylist", getLikedPlaylist);
 router.get("/track", findTrack);
+
+router.post("/track", addTrackToLikedTracks);
 
 export default router;

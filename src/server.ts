@@ -1,5 +1,6 @@
 import spotifyRouter from "@/routes/spotify.routes";
 import tidalRouter from "@/routes/tidal.routes";
+import migrationRouter from "@/routes/migration.routes";
 import cookieParser from "cookie-parser";
 import express from "express";
 import path from "path";
@@ -22,6 +23,7 @@ app.use(express.json());
 
 app.use("/spotify", spotifyRouter);
 app.use("/tidal", tidalRouter);
+app.use("/migrate", migrationRouter);
 
 app.get("/test", async (req, res) => {
   try {
