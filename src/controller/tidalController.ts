@@ -1,16 +1,18 @@
+
 import { generateRandomString, generateS256challenge } from "@/util";
 import { sleep } from "bun";
 import type { Request, Response } from "express";
 
+export interface TidalTrack {}
+
 const CLIENT_ID = process.env.TIDAL_CLIENT_ID;
 const CLIENT_SECRET = process.env.TIDAL_CLIENT_SECRET;
 const REDIRECT_URI = process.env.TIDAL_REDIRECT_URI;
-console.log(CLIENT_SECRET);
 const AUTHORIZATION_ENDPOINT = "https://login.tidal.com/authorize";
 const TOKEN_ENDPOINT = "https://auth.tidal.com/v1/oauth2/token";
 const API_ENDPOINT = "https://openapi.tidal.com/v2";
 const STATE_COOKIE_KEY = "tidal_auth_state";
-const TOKEN_COOKIE_KEY = "tidal_access_token";
+export const TOKEN_COOKIE_KEY = "tidal_access_token";
 const CODE_VERIFIER_KEY = "tidal_code_verifier";
 
 export async function authorize(req: Request, res: Response) {
@@ -18,15 +20,8 @@ export async function authorize(req: Request, res: Response) {
     return res.status(500).send("Configuration incomplete");
   }
 
-  const scopes = [
-    "collection.read",
-    "collection.write",
-    "playlists.read",
-    "playlists.write",
-    "search.read",
-    "search.write"
-  ];
-  const scope = scopes.join(" ");
+  const scope =
+    "collection.read collection.write playlists.read playlists.write";
 
   const { codeChallenge, codeVerifier } = await generateS256challenge();
   res.cookie(CODE_VERIFIER_KEY, codeVerifier);
@@ -169,7 +164,9 @@ export async function findTrack(req: Request, res: Response) {
     const token = req.cookies[TOKEN_COOKIE_KEY];
     const queryString = `filter[isrc]=${isrc}`;
     const response = await fetch(`${API_ENDPOINT}/tracks?${queryString}`, {
-      headers: {"Authorization": `Bearer ${token}`}
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     });
     const result = await response.json();
 
@@ -177,4 +174,31 @@ export async function findTrack(req: Request, res: Response) {
   } catch (err) {
     res.status(500).json(err);
   }
+}
+
+export async function getTracksFromISRC(
+  isrc: string[],
+  token: string
+): Promise<string[]> {
+  // Request chunks of 5 tracks
+  let allTrackIDs: string[] = [];
+
+  while (isrc.length > 0) {
+    const chunk = isrc.splice(0, 4);
+
+    const queryString = chunk.map((val) => `filter[isrc]=${val}`).join("&");
+    const response = await fetch(`${API_ENDPOINT}/tracks?${queryString}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const result = await response.json();
+    allTrackIDs = allTrackIDs.concat(
+      result.data.map((track: { id: string }) => track.id)
+    );
+    await sleep(500); // Sleep to avoid 429
+  }
+
+  return allTrackIDs;
 }

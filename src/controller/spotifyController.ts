@@ -1,7 +1,7 @@
 import { generateRandomString } from "@/util";
 import { type Request, type Response } from "express";
 
-interface SpotifySong {
+export interface SpotifyTrack {
   id: string;
   title: string;
   artist: string;
@@ -108,10 +108,10 @@ export async function callback(req: Request, res: Response) {
   }
 }
 
-export async function getLikedSongs(token: string): Promise<SpotifySong[]> {
+export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
   const limit = 50; // Spotify max limit per request
   let offset = 0;
-  let allTracks: SpotifySong[] = [];
+  let allTracks: SpotifyTrack[] = [];
   let hasNext = true;
 
   console.log("Fetching liked songs from Spotify...");
@@ -134,7 +134,7 @@ export async function getLikedSongs(token: string): Promise<SpotifySong[]> {
     const items = data.items || [];
 
     // Map to SpotifySong interface
-    const tracks: SpotifySong[] = items.map((item: any) => ({
+    const tracks: SpotifyTrack[] = items.map((item: any) => ({
       id: item.track.id,
       title: item.track.name,
       artist: item.track.artists.map((a: any) => a.name).join(", "),
