@@ -1,17 +1,19 @@
-import { type Request, type Response } from "express";
 import {
   TOKEN_COOKIE_KEY as SPOTIFY_TOKEN_COOKIE_KEY,
   getLikedSongs,
-  getUserPlaylists,
-  type SpotifyError,
-  type SpotifyPlaylist,
-  type SpotifyTrack
+  getUserPlaylists
 } from "@/controller/spotifyController";
 import {
   TOKEN_COOKIE_KEY as TIDAL_TOKEN_COOKIE_KEY,
-  getTracksFromISRC,
-  addTracksToLikedSongs
+  addTracksToLikedSongs,
+  getTracksFromISRC
 } from "@/controller/tidalController";
+import type {
+  SpotifyError,
+  SpotifyPlaylist,
+  SpotifyTrack
+} from "@/types/spotify";
+import { type Request, type Response } from "express";
 
 export default async function migrate(
   req: Request,

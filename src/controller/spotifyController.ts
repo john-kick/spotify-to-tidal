@@ -1,31 +1,13 @@
+import type {
+  SpotifyTrack,
+  SpotifyError as SpotifyAPIError,
+  SpotifyPlaylist,
+  SpotifyAPIUserPlaylistsObject,
+  SpotifyAPIPlaylistItemsObject,
+  SpotifyPlaylistTrack
+} from "@/types/spotify";
 import { generateRandomString } from "@/util";
 import { type Request, type Response } from "express";
-
-export type SpotifyTrack = {
-  id: string;
-  title: string;
-  artist: string;
-  isrc: string;
-};
-
-type SpotifyImage = {
-  url: string;
-  height: number;
-  width: number;
-};
-
-export type SpotifyPlaylist = {
-  description: string;
-  images: SpotifyImage[];
-  name: string;
-  public: boolean;
-  tracks: SpotifyTrack[];
-};
-
-export type SpotifyError = {
-  status: number;
-  message: string;
-};
 
 const AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";
 const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
@@ -177,7 +159,7 @@ async function getUserID(token: string): Promise<string> {
   const result = await response.json();
 
   if (result.error) {
-    const error = result.error as SpotifyError;
+    const { error } = result.error as SpotifyAPIError;
     throw new Error(
       `HTTP error ${error.status} while getting user ID: ${error.message}`
     );
@@ -188,24 +170,73 @@ async function getUserID(token: string): Promise<string> {
 
 export async function getUserPlaylists(
   token: string
-): Promise<[SpotifyPlaylist[], SpotifyError[]]> {
+): Promise<[SpotifyPlaylist[], SpotifyAPIError[]]> {
+  console.log("Getting playlists of current user from Spotify...");
   let playlists: SpotifyPlaylist[] = [];
-  const errors: SpotifyError[] = [];
+  const errors: SpotifyAPIError[] = [];
   let next = `${API_URL}/me/playlists`;
+  let playlistCounter = 0;
 
   while (next) {
+    console.log(`Playlist chunk ${++playlistCounter}...`);
     const response = await fetch(next, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    const chunk = await response.json();
+    let chunk = await response.json();
 
     if (chunk.error) {
-      errors.push(chunk.error);
+      const error = chunk as SpotifyAPIError;
+      errors.push(error);
       continue;
     }
 
-    playlists = playlists.concat(chunk.items);
+    const chunkObject = chunk as SpotifyAPIUserPlaylistsObject;
+
+    // Map response object to playlist list
+    const playlistObjects: SpotifyPlaylist[] = await Promise.all(
+      chunkObject.items.map(async (item): Promise<SpotifyPlaylist> => {
+        let allTracks: SpotifyPlaylistTrack[] = [];
+        let next: string | null = item.tracks.href;
+        let trackCounter = 0;
+
+        while (next) {
+          console.log(`    Track chunk ${++trackCounter}...`);
+          const playlistTracksResponse = await fetch(next, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          const result = await playlistTracksResponse.json();
+
+          if (result.error) {
+            const error = result.error as SpotifyAPIError;
+            errors.push(error);
+            continue;
+          }
+
+          const tracks = result as SpotifyAPIPlaylistItemsObject;
+          allTracks = allTracks.concat(
+            tracks.items.map((item) => {
+              return {
+                isrc: item.track.external_ids.isrc,
+                addedAt: item.added_at
+              };
+            })
+          );
+          next = tracks.next;
+        }
+
+        return {
+          description: item.description,
+          images: item.images,
+          name: item.name,
+          tracks: allTracks,
+          public: item.public
+        } as SpotifyPlaylist;
+      })
+    );
+    playlists = playlists.concat(playlistObjects);
+
     next = chunk.next;
   }
 
