@@ -41,19 +41,13 @@ export async function authorize(req: Request, res: Response) {
     response_type: "code",
     client_id: CLIENT_ID,
     redirect_uri: REDIRECT_URI,
-    scope: scope,
+    scope,
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
     state
   };
 
-  const encodedQuery = Object.entries(queryParams)
-    .map(
-      ([key, value]) =>
-        `${encodeURIComponent(key)}=${encodeURIComponent(value)}`
-    )
-    .join("&");
-
+  const encodedQuery = new URLSearchParams(queryParams).toString();
   res.redirect(`${AUTHORIZATION_ENDPOINT}?${encodedQuery}`);
 }
 
@@ -80,7 +74,6 @@ export async function callback(req: Request, res: Response) {
     return res.status(500).send("Configuration incomplete");
   }
 
-  // Get token
   const codeVerifier = req.cookies[CODE_VERIFIER_KEY];
   if (!codeVerifier) {
     return res.status(500).json({ message: "Could not verify received code" });
@@ -95,86 +88,79 @@ export async function callback(req: Request, res: Response) {
     code_verifier: codeVerifier
   });
 
-  const response = await fetch(TOKEN_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: body.toString()
-  });
+  try {
+    const response = await fetch(TOKEN_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString()
+    });
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    return res
-      .status(response.status)
-      .json({ message: "Could not get access token", details: errorBody });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      return res
+        .status(response.status)
+        .json({ message: "Could not get access token", details: errorBody });
+    }
+
+    const { access_token, expires_in } = await response.json();
+
+    res.cookie(TOKEN_COOKIE_KEY, access_token, {
+      httpOnly: true,
+      secure: true,
+      maxAge: expires_in * 1000
+    });
+
+    res.redirect("/");
+  } catch (err) {
+    res.status(500).json({ message: "Token exchange failed", error: err });
   }
-
-  const { access_token, expires_in } = await response.json();
-
-  res.cookie(TOKEN_COOKIE_KEY, access_token, {
-    httpOnly: true,
-    secure: true,
-    maxAge: expires_in * 1000
-  });
-
-  res.redirect("/");
 }
 
 export async function addTrackToLikedTracks(req: Request, res: Response) {
-  const { isrc } = req.body;
+  try {
+    const { isrc } = req.body;
+    const token = req.cookies[TOKEN_COOKIE_KEY];
+    const userID = await getUserID(token);
 
-  const token = req.cookies[TOKEN_COOKIE_KEY];
-  const userID = await getUserID(token);
-
-  const songResponse = await fetch(`${API_URL}/tracks?filter[isrc]=${isrc}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  const songResult = await songResponse.json();
-
-  if (!songResponse.ok) {
-    res.status(songResponse.status).send(songResponse.statusText);
-    return;
-  }
-
-  const songData = songResult.data;
-  if (songData.length === 0) {
-    res.status(404).send("Track not found");
-    return;
-  }
-
-  const songID = songData[0].id as string;
-  console.log(COUNTRY_CODE, userID, songID);
-
-  const body = { data: [{ id: songID, type: "tracks" }] };
-  console.log(token);
-  fetch(
-    `${API_URL}/userCollections/${userID}/relationships/tracks?countryCode=${COUNTRY_CODE}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        accept: "application/vnd.tidal.v1+json",
-        "Content-Type": "application/vnd.tidal.v1+json"
-      },
-      body: JSON.stringify(body)
-    }
-  )
-    .then((response) => {
-      console.log(response);
-      return response.json();
-    })
-    .then((data) => {
-      if (data.errors) {
-        res.status(400).json(data.errors);
-        return;
-      }
-      res.status(200).json(data);
-    })
-    .catch((err) => {
-      console.error(err);
-      res.status(500).json(err);
+    const songResponse = await fetch(`${API_URL}/tracks?filter[isrc]=${isrc}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
+    const songResult = await songResponse.json();
+
+    if (!songResponse.ok) {
+      return res.status(songResponse.status).send(songResponse.statusText);
+    }
+
+    const songData = songResult.data;
+    if (!songData || songData.length === 0) {
+      return res.status(404).send("Track not found");
+    }
+
+    const songID = songData[0].id as string;
+    const body = { data: [{ id: songID, type: "tracks" }] };
+
+    const response = await fetch(
+      `${API_URL}/userCollections/${userID}/relationships/tracks?countryCode=${COUNTRY_CODE}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accept: "application/vnd.tidal.v1+json",
+          "Content-Type": "application/vnd.tidal.v1+json"
+        },
+        body: JSON.stringify(body)
+      }
+    );
+
+    const data = await response.json();
+    if (data.errors) {
+      return res.status(400).json(data.errors);
+    }
+    res.status(200).json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json(err);
+  }
 }
 
 export async function getLikedPlaylist(req: Request, res: Response) {
@@ -182,25 +168,21 @@ export async function getLikedPlaylist(req: Request, res: Response) {
     const token = req.cookies[TOKEN_COOKIE_KEY];
     const userID = await getUserID(token);
 
-    let hasNext = false;
     let nextLink = `${API_URL}/userCollections/${userID}/relationships/tracks`;
     let allTracks: unknown[] = [];
     let counter = 0;
 
-    do {
+    while (nextLink) {
       console.log(`Page ${++counter} (link ${nextLink}) ...`);
       const response = await fetch(nextLink, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
       await sleep(500); // Sleep to avoid 429
       const { data, links } = await response.json();
 
       allTracks = allTracks.concat(data);
-      hasNext = links.next !== undefined;
-      nextLink = API_URL + links.next;
-    } while (hasNext);
+      nextLink = links?.next ? API_URL + links.next : "";
+    }
     res.status(200).json(allTracks);
   } catch (err) {
     console.log(err);
@@ -219,17 +201,13 @@ async function getUserID(token: string): Promise<number> {
 export async function findTrack(req: Request, res: Response) {
   try {
     const { isrc } = req.query;
-
     if (!isrc) {
       return res.status(400).json({ message: "ISRC must be given" });
     }
 
     const token = req.cookies[TOKEN_COOKIE_KEY];
-    const queryString = `filter[isrc]=${isrc}`;
-    const response = await fetch(`${API_URL}/tracks?${queryString}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+    const response = await fetch(`${API_URL}/tracks?filter[isrc]=${isrc}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     const result = await response.json();
 
@@ -243,28 +221,24 @@ export async function getTracksFromISRC(
   isrc: string[],
   token: string
 ): Promise<string[]> {
-  // Request chunks of 5 tracks
   let allTrackIDs: string[] = [];
-
   console.log(`Get ${isrc.length} tracks from Tidal...`);
+
   let chunkCounter = 0;
-  while (isrc.length > 0) {
+  for (let i = 0; i < isrc.length; i += 20) {
     console.log(`Chunk ${++chunkCounter}...`);
-    const chunk = isrc.splice(0, 20);
+    const chunk = isrc.slice(i, i + 20);
 
     const queryString = chunk
       .map((val) => `filter[isrc]=${val.toUpperCase()}`)
       .join("&");
-    console.log(queryString);
     const response = await fetch(`${API_URL}/tracks?${queryString}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     const result = await response.json();
     allTrackIDs = allTrackIDs.concat(
-      result.data.map((track: { id: string }) => track.id)
+      (result.data || []).map((track: { id: string }) => track.id)
     );
     await sleep(500); // Sleep to avoid 429
   }
@@ -279,16 +253,13 @@ export async function addTracksToLikedSongs(
   console.log(`Adding ${trackIDs.length} tracks to liked songs...`);
   const userID = await getUserID(token);
 
-  // Sync tracks in chunks of 20
   let chunkCounter = 0;
-  while (trackIDs.length > 0) {
+  for (let i = 0; i < trackIDs.length; i += 20) {
     console.log(`Processing chunk ${++chunkCounter}...`);
-    const chunk = trackIDs.splice(0, 20);
+    const chunk = trackIDs.slice(i, i + 20);
 
     const body = {
-      data: trackIDs.map((trackID) => {
-        return { id: trackID, type: "tracks" };
-      })
+      data: chunk.map((trackID) => ({ id: trackID, type: "tracks" }))
     };
 
     const response = await fetch(
@@ -300,8 +271,7 @@ export async function addTracksToLikedSongs(
       }
     );
 
-    const { data, errors }: { data: unknown; errors: TidalAPIError } =
-      await response.json();
+    const { errors }: { errors?: TidalAPIError } = await response.json();
     if (errors) {
       errors.errors.forEach((error) =>
         console.error(`HTTP error ${error.code}: ${error.detail}`)
@@ -310,34 +280,34 @@ export async function addTracksToLikedSongs(
     }
 
     console.log("OK");
+    await sleep(200);
   }
 }
 
 export async function createPlaylistsFromSpotifyPlaylists(
   spotifyPlaylists: SpotifyPlaylist[],
   token: string
-): Promise<unknown> {
+): Promise<unknown[]> {
   const results: unknown[] = [];
-  spotifyPlaylists.forEach(async (spotifyPlaylist) => {
-    const playlistID = createPlaylist(spotifyPlaylist, token);
+  for (const spotifyPlaylist of spotifyPlaylists) {
+    const playlistID = await createPlaylist(spotifyPlaylist, token);
+    if (!playlistID) {
+      results.push({ error: "Failed to create playlist" });
+      continue;
+    }
 
-    // Get Track IDs from the ISRCs
-    let trackIDs: string[] = await getTracksFromISRC(
+    const trackIDs = await getTracksFromISRC(
       spotifyPlaylist.tracks.map((track) => track.isrc),
       token
     );
 
     console.log(`Searching IDs of ${trackIDs.length} tracks...`);
-    const playlistData: { id: string; type: string }[] = trackIDs.map(
-      (trackID) => {
-        return { id: trackID, type: "tracks" };
-      }
-    );
-    console.log(`Found ${playlistData.length} tracks`);
+    const playlistData = trackIDs.map((trackID) => ({
+      id: trackID,
+      type: "tracks"
+    }));
 
-    const body = {
-      data: playlistData
-    };
+    const body = { data: playlistData };
 
     console.log(`Filling playlist with ${playlistData.length} tracks...`);
     const response = await fetch(
@@ -352,16 +322,19 @@ export async function createPlaylistsFromSpotifyPlaylists(
       }
     );
 
-    const { data, errors }: { data: unknown; errors: TidalAPIError } =
+    const { data, errors }: { data: unknown; errors?: TidalAPIError } =
       await response.json();
     if (errors) {
       errors.errors.forEach((error) =>
         console.error(`HTTP error ${error.code}: ${error.detail}`)
       );
+      results.push({ error: errors });
+    } else {
+      results.push(data);
     }
     console.log("DONE");
-    results.push(data);
-  });
+    await sleep(200);
+  }
 
   return results;
 }
@@ -394,12 +367,16 @@ export async function createPlaylist(
     }
   );
 
-  const { data, errors }: { data: { id: string }; errors: TidalAPIError } =
+  const { data, errors }: { data?: { id: string }; errors?: TidalAPIError } =
     await response.json();
   if (errors) {
     errors.errors.forEach((error) =>
       console.error(`HTTP error ${error.code}: ${error.detail}`)
     );
+    return null;
+  }
+  if (!data?.id) {
+    console.error("No playlist ID returned");
     return null;
   }
   console.log(`Playlist created with ID ${data.id}`);

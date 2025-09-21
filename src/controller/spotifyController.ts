@@ -8,7 +8,6 @@ import type {
 } from "@/types/spotify";
 import { generateRandomString } from "@/util";
 import { type Request, type Response } from "express";
-import { isNullishCoalesce } from "typescript";
 
 const AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";
 const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
@@ -22,31 +21,27 @@ export const TOKEN_COOKIE_KEY = "spotify_access_token";
 export function authorize(_req: Request, res: Response): void {
   if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
     res.status(500).send("Configuration incomplete");
+    return;
   }
 
   const state = generateRandomString();
   res.cookie(STATE_COOKIE_KEY, state);
 
-  const queryParams = {
+  const queryParams = new URLSearchParams({
     response_type: "code",
     client_id: CLIENT_ID,
     client_secret: CLIENT_SECRET,
     scope: "user-read-private user-read-email user-library-read",
     redirect_uri: REDIRECT_URI,
     state
-  };
+  }).toString();
 
-  const queryString = Object.entries(queryParams)
-    .map(([key, value]) => key + "=" + value)
-    .join("&");
-
-  res.redirect(`${AUTHORIZE_ENDPOINT}?${queryString}`);
+  res.redirect(`${AUTHORIZE_ENDPOINT}?${queryParams}`);
 }
 
 export async function callback(req: Request, res: Response) {
   const { code, error, state } = req.query;
 
-  // Check parameters
   if (error) {
     return res
       .status(400)
@@ -111,7 +106,7 @@ export async function callback(req: Request, res: Response) {
 }
 
 export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
-  const limit = 50; // Spotify max limit per request
+  const limit = 50;
   let offset = 0;
   let allTracks: SpotifyTrack[] = [];
   let hasNext = true;
@@ -122,9 +117,7 @@ export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
     console.log(`Page ${offset / limit + 1}...`);
     const queryString = `limit=${limit}&offset=${offset}`;
     const response = await fetch(`${API_URL}/me/tracks?${queryString}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     if (!response.ok) {
@@ -135,7 +128,6 @@ export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
     const data = await response.json();
     const items = data.items || [];
 
-    // Map to SpotifySong interface
     const tracks: SpotifyTrack[] = items.map((item: any) => ({
       id: item.track.id,
       title: item.track.name,
@@ -184,48 +176,42 @@ export async function getUserPlaylists(
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    let chunk = await response.json();
+    const chunk = await response.json();
 
     if (chunk.error) {
-      const error = chunk as SpotifyAPIError;
-      errors.push(error);
-      next = null;
-      continue;
+      errors.push(chunk as SpotifyAPIError);
+      break;
     }
 
     const chunkObject = chunk as SpotifyAPIUserPlaylistsObject;
 
-    // Map response object to playlist list
     const playlistObjects: SpotifyPlaylist[] = await Promise.all(
       chunkObject.items.map(async (item): Promise<SpotifyPlaylist> => {
         let allTracks: SpotifyPlaylistTrack[] = [];
-        let next: string | null = item.tracks.href;
+        let trackNext: string | null = item.tracks.href;
         let trackCounter = 0;
 
-        while (next) {
+        while (trackNext) {
           console.log(`    Track chunk ${++trackCounter}...`);
-          const playlistTracksResponse = await fetch(next, {
+          const playlistTracksResponse = await fetch(trackNext, {
             headers: { Authorization: `Bearer ${token}` }
           });
 
           const result = await playlistTracksResponse.json();
 
           if (result.error) {
-            const error = result.error as SpotifyAPIError;
-            errors.push(error);
-            continue;
+            errors.push(result.error as SpotifyAPIError);
+            break;
           }
 
           const tracks = result as SpotifyAPIPlaylistItemsObject;
           allTracks = allTracks.concat(
-            tracks.items.map((item) => {
-              return {
-                isrc: item.track.external_ids.isrc,
-                addedAt: item.added_at
-              };
-            })
+            tracks.items.map((trackItem) => ({
+              isrc: trackItem.track.external_ids.isrc,
+              addedAt: trackItem.added_at
+            }))
           );
-          next = tracks.next;
+          trackNext = tracks.next;
         }
 
         return {
