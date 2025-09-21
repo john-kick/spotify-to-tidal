@@ -62,22 +62,3 @@ async function migratePlaylists(
 ): Promise<[SpotifyPlaylist[], SpotifyError[]]> {
   return await getUserPlaylists(spotifyToken);
 }
-
-export async function testPlaylistCreation(
-  req: Request,
-  res: Response
-): Promise<void> {
-  try {
-    const playlist: SpotifyPlaylist = {
-      description: "Test playlist created with Tidal API",
-      name: "Test playlist",
-      public: false,
-      tracks: [],
-      images: []
-    };
-    const token = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
-    await createPlaylist(playlist, token);
-  } catch (err) {
-    res.status(500).send(err);
-  }
-}

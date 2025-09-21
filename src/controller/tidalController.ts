@@ -314,16 +314,17 @@ export async function addTracksToLikedSongs(
 
 export async function createPlaylist(playlist: SpotifyPlaylist, token: string) {
   const body = {
-    data: {
-      attributes: {
-        accessType: playlist.public ? "PUBLIC" : "PRIVATE",
-        description: playlist.description,
-        name: playlist.name
+    "data": {
+      "attributes": {
+        "accessType": playlist.public ? "PUBLIC" : "UNLISTED",
+        "description": playlist.description,
+        "name": playlist.name
       },
-      type: "playlists"
+      "type": "playlists"
     }
   };
-  await fetch(`${API_URL}/playlists`, {
+
+  const response = await fetch(`${API_URL}/playlists?countryCode=${COUNTRY_CODE}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -331,4 +332,6 @@ export async function createPlaylist(playlist: SpotifyPlaylist, token: string) {
     },
     body: JSON.stringify(body)
   });
+
+  return await response.json();
 }

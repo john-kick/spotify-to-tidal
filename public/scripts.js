@@ -12,8 +12,8 @@ document
         body: JSON.stringify({isrc: document.getElementById("isrc").value})
       })
         .then((response) => response.json())
-        .then((result) => {console.log(result);})
-        .catch((err) => {console.error(err)});
+        .then((result) => console.log(result))
+        .catch((err) => console.error(err));
 
       return;
     }
