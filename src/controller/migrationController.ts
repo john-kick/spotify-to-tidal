@@ -6,6 +6,7 @@ import {
 import {
   TOKEN_COOKIE_KEY as TIDAL_TOKEN_COOKIE_KEY,
   addTracksToLikedSongs,
+  createPlaylist,
   getTracksFromISRC
 } from "@/controller/tidalController";
 import type {
@@ -22,7 +23,7 @@ export default async function migrate(
   try {
     const spotifyToken = req.cookies[SPOTIFY_TOKEN_COOKIE_KEY];
     const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
-    // await migrateLikedSongs(spotifyToken, tidalToken);
+    await migrateLikedSongs(spotifyToken, tidalToken);
     const [spotifyPlaylists, spotifyErrors]: [
       spotifyPlaylists: SpotifyPlaylist[],
       spotifyErrors: SpotifyError[]
@@ -60,4 +61,23 @@ async function migratePlaylists(
   tidalToken: string
 ): Promise<[SpotifyPlaylist[], SpotifyError[]]> {
   return await getUserPlaylists(spotifyToken);
+}
+
+export async function testPlaylistCreation(
+  req: Request,
+  res: Response
+): Promise<void> {
+  try {
+    const playlist: SpotifyPlaylist = {
+      description: "Test playlist created with Tidal API",
+      name: "Test playlist",
+      public: false,
+      tracks: [],
+      images: []
+    };
+    const token = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
+    await createPlaylist(playlist, token);
+  } catch (err) {
+    res.status(500).send(err);
+  }
 }

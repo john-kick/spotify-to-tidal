@@ -1,8 +1,16 @@
+import type { SpotifyPlaylist } from "@/types/spotify";
 import { generateRandomString, generateS256challenge } from "@/util";
 import { sleep } from "bun";
 import type { Request, Response } from "express";
 
-export interface TidalTrack {}
+export type TidalAPIError = {
+  errors: [
+    {
+      detail: string;
+      code: number;
+    }
+  ];
+};
 
 const CLIENT_ID = process.env.TIDAL_CLIENT_ID;
 const CLIENT_SECRET = process.env.TIDAL_CLIENT_SECRET;
@@ -10,7 +18,7 @@ const REDIRECT_URI = process.env.TIDAL_REDIRECT_URI;
 const COUNTRY_CODE = process.env.COUNTRY_CODE || "DE";
 const AUTHORIZATION_ENDPOINT = "https://login.tidal.com/authorize";
 const TOKEN_ENDPOINT = "https://auth.tidal.com/v1/oauth2/token";
-const API_ENDPOINT = "https://openapi.tidal.com/v2";
+const API_URL = "https://openapi.tidal.com/v2";
 const STATE_COOKIE_KEY = "tidal_auth_state";
 export const TOKEN_COOKIE_KEY = "tidal_access_token";
 const CODE_VERIFIER_KEY = "tidal_code_verifier";
@@ -119,8 +127,8 @@ export async function addTrackToLikedTracks(req: Request, res: Response) {
   const token = req.cookies[TOKEN_COOKIE_KEY];
   const userID = await getUserID(token);
 
-  const songResponse = await fetch(`${API_ENDPOINT}/tracks?filter[isrc]=${isrc}`, {
-    headers: {"Authorization": `Bearer ${token}`}
+  const songResponse = await fetch(`${API_URL}/tracks?filter[isrc]=${isrc}`, {
+    headers: { Authorization: `Bearer ${token}` }
   });
   const songResult = await songResponse.json();
 
@@ -138,18 +146,24 @@ export async function addTrackToLikedTracks(req: Request, res: Response) {
   const songID = songData[0].id as string;
   console.log(COUNTRY_CODE, userID, songID);
 
-  const body = {data: [{id: songID, type: "tracks"}]};
+  const body = { data: [{ id: songID, type: "tracks" }] };
   console.log(token);
-  fetch(`${API_ENDPOINT}/userCollections/${userID}/relationships/tracks?countryCode=${COUNTRY_CODE}`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "accept": "application/vnd.tidal.v1+json",
-      "Content-Type": "application/vnd.tidal.v1+json"
-    },
-    body: JSON.stringify(body)
-  })
-    .then(response => {console.log(response);return response.json()})
+  fetch(
+    `${API_URL}/userCollections/${userID}/relationships/tracks?countryCode=${COUNTRY_CODE}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        accept: "application/vnd.tidal.v1+json",
+        "Content-Type": "application/vnd.tidal.v1+json"
+      },
+      body: JSON.stringify(body)
+    }
+  )
+    .then((response) => {
+      console.log(response);
+      return response.json();
+    })
     .then((data) => {
       if (data.errors) {
         res.status(400).json(data.errors);
@@ -157,7 +171,7 @@ export async function addTrackToLikedTracks(req: Request, res: Response) {
       }
       res.status(200).json(data);
     })
-    .catch(err => {
+    .catch((err) => {
       console.error(err);
       res.status(500).json(err);
     });
@@ -169,7 +183,7 @@ export async function getLikedPlaylist(req: Request, res: Response) {
     const userID = await getUserID(token);
 
     let hasNext = false;
-    let nextLink = `${API_ENDPOINT}/userCollections/${userID}/relationships/tracks`;
+    let nextLink = `${API_URL}/userCollections/${userID}/relationships/tracks`;
     let allTracks: unknown[] = [];
     let counter = 0;
 
@@ -185,7 +199,7 @@ export async function getLikedPlaylist(req: Request, res: Response) {
 
       allTracks = allTracks.concat(data);
       hasNext = links.next !== undefined;
-      nextLink = API_ENDPOINT + links.next;
+      nextLink = API_URL + links.next;
     } while (hasNext);
     res.status(200).json(allTracks);
   } catch (err) {
@@ -195,7 +209,7 @@ export async function getLikedPlaylist(req: Request, res: Response) {
 }
 
 async function getUserID(token: string): Promise<number> {
-  const response = await fetch(`${API_ENDPOINT}/users/me`, {
+  const response = await fetch(`${API_URL}/users/me`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   const result = await response.json();
@@ -212,7 +226,7 @@ export async function findTrack(req: Request, res: Response) {
 
     const token = req.cookies[TOKEN_COOKIE_KEY];
     const queryString = `filter[isrc]=${isrc}`;
-    const response = await fetch(`${API_ENDPOINT}/tracks?${queryString}`, {
+    const response = await fetch(`${API_URL}/tracks?${queryString}`, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -238,9 +252,11 @@ export async function getTracksFromISRC(
     console.log(`Chunk ${++chunkCounter}...`);
     const chunk = isrc.splice(0, 20);
 
-    const queryString = chunk.map((val) => `filter[isrc]=${val.toUpperCase()}`).join("&");
+    const queryString = chunk
+      .map((val) => `filter[isrc]=${val.toUpperCase()}`)
+      .join("&");
     console.log(queryString);
-    const response = await fetch(`${API_ENDPOINT}/tracks?${queryString}`, {
+    const response = await fetch(`${API_URL}/tracks?${queryString}`, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -256,7 +272,10 @@ export async function getTracksFromISRC(
   return allTrackIDs;
 }
 
-export async function addTracksToLikedSongs(trackIDs: string[], token: string): void {
+export async function addTracksToLikedSongs(
+  trackIDs: string[],
+  token: string
+): Promise<void> {
   console.log(`Adding ${trackIDs.length} tracks to liked songs...`);
   const userID = await getUserID(token);
 
@@ -267,18 +286,24 @@ export async function addTracksToLikedSongs(trackIDs: string[], token: string): 
     const chunk = trackIDs.splice(0, 20);
 
     const body = {
-      data: trackIDs.map((trackID) => {return {"id": trackID, "type": "tracks"};})
+      data: trackIDs.map((trackID) => {
+        return { id: trackID, type: "tracks" };
+      })
     };
 
-    const response = await fetch(`${API_ENDPOINT}/userCollections/${userID}/relationships/tracks`, {
-      method: "POST",
-      headers: {"Authorization": `Bearer ${token}`},
-      body: JSON.stringify(body)
-    });
+    const response = await fetch(
+      `${API_URL}/userCollections/${userID}/relationships/tracks`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body)
+      }
+    );
 
     const result = await response.json();
     if (result > 299) {
-      result.errors.forEach((error) => {
+      const errorResult = result as TidalAPIError;
+      errorResult.errors.forEach((error) => {
         console.error(`Error: ${error.detail} (${error.code})`);
       });
     } else {
@@ -287,3 +312,23 @@ export async function addTracksToLikedSongs(trackIDs: string[], token: string): 
   }
 }
 
+export async function createPlaylist(playlist: SpotifyPlaylist, token: string) {
+  const body = {
+    data: {
+      attributes: {
+        accessType: playlist.public ? "PUBLIC" : "PRIVATE",
+        description: playlist.description,
+        name: playlist.name
+      },
+      type: "playlists"
+    }
+  };
+  await fetch(`${API_URL}/playlists`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/vnd.api+json"
+    },
+    body: JSON.stringify(body)
+  });
+}
