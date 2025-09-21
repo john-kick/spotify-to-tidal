@@ -1,12 +1,31 @@
 import { generateRandomString } from "@/util";
 import { type Request, type Response } from "express";
 
-export interface SpotifyTrack {
+export type SpotifyTrack = {
   id: string;
   title: string;
   artist: string;
   isrc: string;
-}
+};
+
+type SpotifyImage = {
+  url: string;
+  height: number;
+  width: number;
+};
+
+export type SpotifyPlaylist = {
+  description: string;
+  images: SpotifyImage[];
+  name: string;
+  public: boolean;
+  tracks: SpotifyTrack[];
+};
+
+export type SpotifyError = {
+  status: number;
+  message: string;
+};
 
 const AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";
 const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
@@ -148,4 +167,47 @@ export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
   }
 
   return allTracks;
+}
+
+async function getUserID(token: string): Promise<string> {
+  const response = await fetch(`${API_URL}/me`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const result = await response.json();
+
+  if (result.error) {
+    const error = result.error as SpotifyError;
+    throw new Error(
+      `HTTP error ${error.status} while getting user ID: ${error.message}`
+    );
+  }
+
+  return result.id;
+}
+
+export async function getUserPlaylists(
+  token: string
+): Promise<[SpotifyPlaylist[], SpotifyError[]]> {
+  let playlists: SpotifyPlaylist[] = [];
+  const errors: SpotifyError[] = [];
+  let next = `${API_URL}/me/playlists`;
+
+  while (next) {
+    const response = await fetch(next, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    const chunk = await response.json();
+
+    if (chunk.error) {
+      errors.push(chunk.error);
+      continue;
+    }
+
+    playlists = playlists.concat(chunk.items);
+    next = chunk.next;
+  }
+
+  return [playlists, errors];
 }
