@@ -2,7 +2,6 @@ import type { SpotifyPlaylist } from "@/types/spotify";
 import { generateRandomString, generateS256challenge } from "@/util";
 import { sleep } from "bun";
 import type { Request, Response } from "express";
-import type { StringMappingType } from "typescript";
 
 export type TidalAPIError = {
   errors: [
@@ -301,15 +300,16 @@ export async function addTracksToLikedSongs(
       }
     );
 
-    const result = await response.json();
-    if (result > 299) {
-      const errorResult = result as TidalAPIError;
-      errorResult.errors.forEach((error) => {
-        console.error(`Error: ${error.detail} (${error.code})`);
-      });
-    } else {
-      console.log("OK");
+    const { data, errors }: { data: unknown; errors: TidalAPIError } =
+      await response.json();
+    if (errors) {
+      errors.errors.forEach((error) =>
+        console.error(`HTTP error ${error.code}: ${error.detail}`)
+      );
+      continue;
     }
+
+    console.log("OK");
   }
 }
 
@@ -351,9 +351,16 @@ export async function createPlaylistsFromSpotifyPlaylists(
         body: JSON.stringify(body)
       }
     );
-    console.log("DONE");
 
-    results.push(await response.json());
+    const { data, errors }: { data: unknown; errors: TidalAPIError } =
+      await response.json();
+    if (errors) {
+      errors.errors.forEach((error) =>
+        console.error(`HTTP error ${error.code}: ${error.detail}`)
+      );
+    }
+    console.log("DONE");
+    results.push(data);
   });
 
   return results;
@@ -362,7 +369,7 @@ export async function createPlaylistsFromSpotifyPlaylists(
 export async function createPlaylist(
   playlist: SpotifyPlaylist,
   token: string
-): Promise<string> {
+): Promise<string | null> {
   console.log(`Creating playlist ${playlist.name}...`);
   const body = {
     data: {
@@ -387,7 +394,14 @@ export async function createPlaylist(
     }
   );
 
-  const { data } = await response.json();
+  const { data, errors }: { data: { id: string }; errors: TidalAPIError } =
+    await response.json();
+  if (errors) {
+    errors.errors.forEach((error) =>
+      console.error(`HTTP error ${error.code}: ${error.detail}`)
+    );
+    return null;
+  }
   console.log(`Playlist created with ID ${data.id}`);
   return data.id;
 }

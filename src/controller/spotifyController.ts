@@ -8,6 +8,7 @@ import type {
 } from "@/types/spotify";
 import { generateRandomString } from "@/util";
 import { type Request, type Response } from "express";
+import { isNullishCoalesce } from "typescript";
 
 const AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";
 const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
@@ -174,12 +175,12 @@ export async function getUserPlaylists(
   console.log("Getting playlists of current user from Spotify...");
   let playlists: SpotifyPlaylist[] = [];
   const errors: SpotifyAPIError[] = [];
-  let next = `${API_URL}/me/playlists`;
+  let next: string | null = `${API_URL}/me/playlists`;
   let playlistCounter = 0;
 
   while (next) {
     console.log(`Playlist chunk ${++playlistCounter}...`);
-    const response = await fetch(next, {
+    const response: globalThis.Response = await fetch(next, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
@@ -188,6 +189,7 @@ export async function getUserPlaylists(
     if (chunk.error) {
       const error = chunk as SpotifyAPIError;
       errors.push(error);
+      next = null;
       continue;
     }
 
