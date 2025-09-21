@@ -1,19 +1,18 @@
+import {
+  getLikedSongs,
+  TOKEN_COOKIE_KEY as SPOTIFY_TOKEN_COOKIE_KEY
+} from "@/controller/spotifyController";
+import {
+  getTracksFromISRC,
+  TOKEN_COOKIE_KEY as TIDAL_TOKEN_COOKIE_KEY
+} from "@/controller/tidalController";
+import migrationRouter from "@/routes/migration.routes";
 import spotifyRouter from "@/routes/spotify.routes";
 import tidalRouter from "@/routes/tidal.routes";
-import migrationRouter from "@/routes/migration.routes";
 import cookieParser from "cookie-parser";
 import express from "express";
 import path from "path";
-import {
-  getTracksFromISRC,
-  TOKEN_COOKIE_KEY as TIDAL_TOKEN_COOKIE_KEY,
-  type TidalTrack
-} from "@/controller/tidalController";
-import {
-  getLikedSongs,
-  TOKEN_COOKIE_KEY as SPOTIFY_TOKEN_COOKIE_KEY,
-  type SpotifyTrack
-} from "@/controller/spotifyController";
+import type { SpotifyTrack } from "@/types/spotify";
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -30,7 +29,7 @@ app.get("/test", async (req, res) => {
     const spotifyToken = req.cookies[SPOTIFY_TOKEN_COOKIE_KEY];
     const spotifyTracks: SpotifyTrack[] = await getLikedSongs(spotifyToken);
     const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
-    const tidalTracks: TidalTrack[] = await getTracksFromISRC(
+    const tidalTracks: string[] = await getTracksFromISRC(
       spotifyTracks.map((track) => track.isrc),
       tidalToken
     );
