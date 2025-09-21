@@ -2,6 +2,7 @@ import type { SpotifyPlaylist } from "@/types/spotify";
 import { generateRandomString, generateS256challenge } from "@/util";
 import { sleep } from "bun";
 import type { Request, Response } from "express";
+import type { StringMappingType } from "typescript";
 
 export type TidalAPIError = {
   errors: [
@@ -312,26 +313,81 @@ export async function addTracksToLikedSongs(
   }
 }
 
-export async function createPlaylist(playlist: SpotifyPlaylist, token: string) {
+export async function createPlaylistsFromSpotifyPlaylists(
+  spotifyPlaylists: SpotifyPlaylist[],
+  token: string
+): Promise<unknown> {
+  const results: unknown[] = [];
+  spotifyPlaylists.forEach(async (spotifyPlaylist) => {
+    const playlistID = createPlaylist(spotifyPlaylist, token);
+
+    // Get Track IDs from the ISRCs
+    let trackIDs: string[] = await getTracksFromISRC(
+      spotifyPlaylist.tracks.map((track) => track.isrc),
+      token
+    );
+
+    console.log(`Searching IDs of ${trackIDs.length} tracks...`);
+    const playlistData: { id: string; type: string }[] = trackIDs.map(
+      (trackID) => {
+        return { id: trackID, type: "tracks" };
+      }
+    );
+    console.log(`Found ${playlistData.length} tracks`);
+
+    const body = {
+      data: playlistData
+    };
+
+    console.log(`Filling playlist with ${playlistData.length} tracks...`);
+    const response = await fetch(
+      `${API_URL}/playlists/${playlistID}/relationships/items`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/vnd.api+json"
+        },
+        body: JSON.stringify(body)
+      }
+    );
+    console.log("DONE");
+
+    results.push(await response.json());
+  });
+
+  return results;
+}
+
+export async function createPlaylist(
+  playlist: SpotifyPlaylist,
+  token: string
+): Promise<string> {
+  console.log(`Creating playlist ${playlist.name}...`);
   const body = {
-    "data": {
-      "attributes": {
-        "accessType": playlist.public ? "PUBLIC" : "UNLISTED",
-        "description": playlist.description,
-        "name": playlist.name
+    data: {
+      attributes: {
+        accessType: playlist.public ? "PUBLIC" : "UNLISTED",
+        description: playlist.description,
+        name: playlist.name
       },
-      "type": "playlists"
+      type: "playlists"
     }
   };
 
-  const response = await fetch(`${API_URL}/playlists?countryCode=${COUNTRY_CODE}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/vnd.api+json"
-    },
-    body: JSON.stringify(body)
-  });
+  const response = await fetch(
+    `${API_URL}/playlists?countryCode=${COUNTRY_CODE}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/vnd.api+json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
 
-  return await response.json();
+  const { data } = await response.json();
+  console.log(`Playlist created with ID ${data.id}`);
+  return data.id;
 }

@@ -7,6 +7,7 @@ import {
   TOKEN_COOKIE_KEY as TIDAL_TOKEN_COOKIE_KEY,
   addTracksToLikedSongs,
   createPlaylist,
+  createPlaylistsFromSpotifyPlaylists,
   getTracksFromISRC
 } from "@/controller/tidalController";
 import type {
@@ -23,20 +24,9 @@ export default async function migrate(
   try {
     const spotifyToken = req.cookies[SPOTIFY_TOKEN_COOKIE_KEY];
     const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
-    await migrateLikedSongs(spotifyToken, tidalToken);
-    const [spotifyPlaylists, spotifyErrors]: [
-      spotifyPlaylists: SpotifyPlaylist[],
-      spotifyErrors: SpotifyError[]
-    ] = await migratePlaylists(spotifyToken, tidalToken);
-    if (spotifyErrors.length > 0) {
-      res.status(500).json({
-        message: "Playlists migrated, but errors occurred",
-        playlists: spotifyPlaylists,
-        errors: spotifyErrors
-      });
-      return;
-    }
-    res.status(200).json(spotifyPlaylists);
+    // await migrateLikedSongs(spotifyToken, tidalToken);
+    const data = await migratePlaylists(spotifyToken, tidalToken);
+    res.status(200).send(data);
   } catch (err) {
     console.error(err);
     res.status(500).json(err);
@@ -59,6 +49,12 @@ async function migrateLikedSongs(
 async function migratePlaylists(
   spotifyToken: string,
   tidalToken: string
-): Promise<[SpotifyPlaylist[], SpotifyError[]]> {
-  return await getUserPlaylists(spotifyToken);
+): Promise<unknown> {
+  const [spotifyPlaylists, spotifyErrors] = await getUserPlaylists(
+    spotifyToken
+  );
+  return await createPlaylistsFromSpotifyPlaylists(
+    spotifyPlaylists,
+    tidalToken
+  );
 }
