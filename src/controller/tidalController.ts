@@ -502,7 +502,9 @@ async function getAllPlaylists(
     userPlaylistsResults = userPlaylistsResults.concat(
       userPlaylistsResult.data
     );
-    next = userPlaylistsResult.links.next ?? undefined;
+    next = userPlaylistsResult.links.next
+      ? API_URL + userPlaylistsResult.links.next
+      : undefined;
   }
 
   return userPlaylistsResults;
