@@ -20,11 +20,8 @@ export default async function migrate(
   try {
     const spotifyToken = req.cookies[SPOTIFY_TOKEN_COOKIE_KEY];
     const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
-    const result = await migrateLikedSongs(spotifyToken, tidalToken);
-    if (result) {
-      res.status(400).send(result);
-      return;
-    }
+    // await migrateLikedSongs(spotifyToken, tidalToken);
+    await migratePlaylists(spotifyToken, tidalToken);
     res.status(200).send("OK");
   } catch (err) {
     console.error(err);
