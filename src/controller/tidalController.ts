@@ -5,7 +5,8 @@ import type {
   TidalAPIGetUserTrackRelResponse,
   TidalAPIPostPlaylistResponse,
   TidalAPIPostUserTrackRelResponse,
-  TidalAPIGetTracksResponse as TidalAPITracks,
+  TidalAPITrackData,
+  TidalAPITracks,
   TidalAPIUserPlaylists,
   TidalAPIUserPlaylistsData
 } from "@/types/tidal";
@@ -264,16 +265,16 @@ export async function findTrack(req: Request, res: Response) {
 }
 
 export async function getTracksFromISRC(
-  isrc: string[],
+  isrcs: string[],
   token: string
 ): Promise<{ success: boolean; result: TidalAPIError | string[] }> {
-  let allTrackIDs: string[] = [];
-  console.log(`Get ${isrc.length} tracks from Tidal...`);
+  let allTracks: TidalAPITrackData[] = [];
+  console.log(`Get ${isrcs.length} tracks from Tidal...`);
 
   let chunkCounter = 0;
-  for (let i = 0; i < isrc.length; i += 20) {
+  for (let i = 0; i < isrcs.length; i += 20) {
     console.log(`Chunk ${++chunkCounter}...`);
-    const chunk = isrc.slice(i, i + 20);
+    const chunk = isrcs.slice(i, i + 20);
 
     const queryString = chunk
       .map((val) => `filter[isrc]=${val.toUpperCase()}`)
@@ -292,14 +293,20 @@ export async function getTracksFromISRC(
       return { success: false, result: errResult };
     }
 
-    const result: TidalAPITracks = await response.json();
-    allTrackIDs = allTrackIDs.concat(
-      (result.data || []).map((track: { id: string }) => track.id)
-    );
+    const result: TidalAPITrackData = await response.json();
+
+    allTracks = allTracks.concat(result);
     await sleep(500); // Sleep to avoid 429
   }
 
-  return { success: true, result: allTrackIDs };
+  // Check if all tracks were found
+  isrcs.forEach((isrc) => {
+    if (!allTracks.map((track) => track.attributes.isrc).includes(isrc)) {
+      console.warn(`Track with ISRC ${isrc} was not found!`);
+    }
+  });
+
+  return { success: true, result: allTracks.map((track) => track.id) };
 }
 
 export async function addTracksToLikedSongs(

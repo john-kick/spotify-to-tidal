@@ -46,6 +46,9 @@ export type SpotifyAPIUserPlaylists = {
       width: number;
     }[];
     public: boolean;
+    owner: {
+      id: string;
+    };
   }[];
   next?: string;
 };

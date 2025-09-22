@@ -169,6 +169,7 @@ export async function getUserPlaylists(
   token: string
 ): Promise<[SpotifyPlaylist[], SpotifyAPIError[]]> {
   console.log("Getting playlists of current user from Spotify...");
+  const userID = await getUserID(token);
   let playlists: SpotifyPlaylist[] = [];
   const errors: SpotifyAPIError[] = [];
   let next: string | undefined = `${API_URL}/me/playlists`;
@@ -189,6 +190,10 @@ export async function getUserPlaylists(
     const result: SpotifyAPIUserPlaylists = await response.json();
 
     for (const item of result.items) {
+      if (item.owner.id !== userID) {
+        console.log(`Skipping playlist ${item.name}`);
+        continue;
+      }
       console.log(`  Getting tracks from playlist ${item.name}...`);
       let allTracks: SpotifyPlaylistTrack[] = [];
       let trackNext: string | undefined = item.tracks.href;

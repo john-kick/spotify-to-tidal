@@ -7,8 +7,13 @@ export type TidalAPIError = {
   ];
 };
 
-export type TidalAPIGetTracksResponse = {
-  data: { id: string }[];
+export type TidalAPITracks = {
+  data: TidalAPITrackData[];
+};
+
+export type TidalAPITrackData = {
+  id: string;
+  attributes: { isrc: string };
 };
 
 export type TidalAPIGetUserTrackRelResponse = {
