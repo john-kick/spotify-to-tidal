@@ -5,11 +5,13 @@ import type {
   TidalAPIGetUserTrackRelResponse,
   TidalAPIPostPlaylistResponse,
   TidalAPIPostUserTrackRelResponse,
-  TidalAPIGetTracksResponse as TidalAPITracks
+  TidalAPIGetTracksResponse as TidalAPITracks,
+  TidalAPIUserPlaylists
 } from "@/types/tidal";
 import { generateRandomString, generateS256challenge } from "@/util";
 import { sleep } from "bun";
 import type { Request, Response } from "express";
+import { forEachChild } from "typescript";
 type FetchResponse = globalThis.Response;
 
 const CLIENT_ID = process.env.TIDAL_CLIENT_ID;
@@ -453,4 +455,49 @@ async function handleErrorResult(
 ): Promise<void> {
   const errResult: TidalAPIError = await fetchResponse.json();
   expressResponse.status(fetchResponse.status).send(errResult.errors);
+}
+
+async function getAllPlaylists(token: string): Promise<TidalAPIUserPlaylists> {
+  const userID = getUserID(token);
+
+  const userPlaylistsResponse = await fetch(
+    `${API_URL}/playlists?countryCode=${COUNTRY_CODE}&filter[owners.id]=${userID}`,
+    {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  );
+
+  if (!userPlaylistsResponse.ok) {
+    const errResult: TidalAPIError = await userPlaylistsResponse.json();
+    errResult.errors.forEach((error) =>
+      console.error(
+        `Could not get user playlists: (${error.code}) ${error.detail}`
+      )
+    );
+  }
+
+  const userPlaylistsResult: TidalAPIUserPlaylists =
+    await userPlaylistsResponse.json();
+
+  return userPlaylistsResult;
+}
+
+export async function removeAllPlaylists(req: Request, res: Response) {
+  const token = req.cookies[TOKEN_COOKIE_KEY];
+  const playlists = await getAllPlaylists(token);
+
+  playlists.data.forEach(async (playlist) => {
+    const deleteResponse = await fetch(`/playlist/${playlist.id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!deleteResponse.ok) {
+      const errResult: TidalAPIError = await deleteResponse.json();
+      errResult.errors.forEach((error) =>
+        console.error(
+          `Could not remove playlist ${playlist.name}: (${error.code}) ${error.detail}`
+        )
+      );
+    }
+  });
 }

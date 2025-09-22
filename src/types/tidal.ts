@@ -28,3 +28,10 @@ export type TidalAPIPostPlaylistResponse = {
     id: string;
   };
 };
+
+export type TidalAPIUserPlaylists = {
+  data: {
+    id: string;
+    name: string;
+  }[];
+};

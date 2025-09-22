@@ -8,8 +8,8 @@ document
     if (action === "Post") {
       fetch(`/tidal/track`, {
         method: "POST",
-	headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({isrc: document.getElementById("isrc").value})
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isrc: document.getElementById("isrc").value })
       })
         .then((response) => response.json())
         .then((result) => console.log(result))
@@ -52,5 +52,22 @@ document
       })
       .catch((error) => {
         console.error("Error during migration:", error);
+      });
+  });
+
+document
+  .getElementById("delete-playlists")
+  .addEventListener("submit", function (event) {
+    event.preventDefault();
+    fetch("/tidal/playlists", {
+      method: "DELETE"
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Delete playlists result:", data);
+        // Handle the deletion result as needed
+      })
+      .catch((error) => {
+        console.error("Error deleting playlists:", error);
       });
   });
