@@ -372,33 +372,38 @@ export async function createPlaylistsFromSpotifyPlaylists(
       type: "tracks"
     }));
 
-    const body = { data: playlistData };
-
     console.log(
       `Filling playlist ${spotifyPlaylist.name} with ${playlistData.length} tracks...`
     );
-    const response = await fetch(
-      `${API_URL}/playlists/${playlistID}/relationships/items`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/vnd.api+json"
-        },
-        body: JSON.stringify(body)
-      }
-    );
 
-    if (!response.ok) {
-      const errResult: TidalAPIError = await response.json();
-      errResult.errors.forEach((error) =>
-        console.error(
-          `Error while posting liked tracks to playlist ${spotifyPlaylist.name}: (${error.code}) ${error.detail}`
-        )
+    const chunkSize = 20;
+    for (let i = 0; i < trackIDs.length; i += chunkSize) {
+      const chunk = playlistData.slice(i, i + chunkSize);
+      console.log(`Chunk ${chunkSize / i + 1}...`);
+      const body = { data: chunk };
+      const response = await fetch(
+        `${API_URL}/playlists/${playlistID}/relationships/items`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/vnd.api+json"
+          },
+          body: JSON.stringify(body)
+        }
       );
-      continue;
+
+      if (!response.ok) {
+        const errResult: TidalAPIError = await response.json();
+        errResult.errors.forEach((error) =>
+          console.error(
+            `Error while posting tracks to playlist ${spotifyPlaylist.name}: (${error.code}) ${error.detail}`
+          )
+        );
+        continue;
+      }
+      await sleep(200);
     }
-    await sleep(200);
   }
 }
 
@@ -491,7 +496,7 @@ export async function removeAllPlaylists(req: Request, res: Response) {
 
   console.log(`Deleting ${playlists.data.length} playlists...`);
   for (const [index, playlist] of playlists.data.entries()) {
-    console.log(`Playlist ${index+1}...`);
+    console.log(`Playlist ${index + 1}...`);
     const deleteResponse = await fetch(`${API_URL}/playlists/${playlist.id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` }
