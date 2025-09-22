@@ -6,7 +6,8 @@ import type {
   TidalAPIPostPlaylistResponse,
   TidalAPIPostUserTrackRelResponse,
   TidalAPIGetTracksResponse as TidalAPITracks,
-  TidalAPIUserPlaylists
+  TidalAPIUserPlaylists,
+  TidalAPIUserPlaylistsData
 } from "@/types/tidal";
 import { generateRandomString, generateS256challenge } from "@/util";
 import { sleep } from "bun";
@@ -463,40 +464,49 @@ async function handleErrorResult(
   expressResponse.status(fetchResponse.status).send(errResult.errors);
 }
 
-async function getAllPlaylists(token: string): Promise<TidalAPIUserPlaylists> {
+async function getAllPlaylists(
+  token: string
+): Promise<TidalAPIUserPlaylistsData[]> {
   const userID = await getUserID(token);
+  let userPlaylistsResults: TidalAPIUserPlaylistsData[] = [];
+  let next:
+    | string
+    | undefined = `${API_URL}/playlists?countryCode=${COUNTRY_CODE}&filter[owners.id]=${userID}`;
 
-  const userPlaylistsResponse = await fetch(
-    `${API_URL}/playlists?countryCode=${COUNTRY_CODE}&filter[owners.id]=${userID}`,
-    {
+  while (next) {
+    const userPlaylistsResponse = await fetch(next, {
       headers: { Authorization: `Bearer ${token}` }
-    }
-  );
+    });
 
-  if (!userPlaylistsResponse.ok) {
-    const errResult: TidalAPIError = await userPlaylistsResponse.json();
-    errResult.errors.forEach((error) =>
-      console.error(
-        `Could not get user playlists: (${error.code}) ${error.detail}`
-      )
+    if (!userPlaylistsResponse.ok) {
+      const errResult: TidalAPIError = await userPlaylistsResponse.json();
+      errResult.errors.forEach((error) =>
+        console.error(
+          `Could not get user playlists: (${error.code}) ${error.detail}`
+        )
+      );
+      throw new Error(
+        "Errors while getting playlists from Spotify. Please check the console for errors"
+      );
+    }
+
+    const userPlaylistsResult: TidalAPIUserPlaylists =
+      await userPlaylistsResponse.json();
+    userPlaylistsResults = userPlaylistsResults.concat(
+      userPlaylistsResult.data
     );
-    throw new Error(
-      "Errors while getting playlists from Spotify. Please check the console for errors"
-    );
+    next = userPlaylistsResult.links.next ?? undefined;
   }
 
-  const userPlaylistsResult: TidalAPIUserPlaylists =
-    await userPlaylistsResponse.json();
-
-  return userPlaylistsResult;
+  return userPlaylistsResults;
 }
 
 export async function removeAllPlaylists(req: Request, res: Response) {
   const token = req.cookies[TOKEN_COOKIE_KEY];
   const playlists = await getAllPlaylists(token);
 
-  console.log(`Deleting ${playlists.data.length} playlists...`);
-  for (const [index, playlist] of playlists.data.entries()) {
+  console.log(`Deleting ${playlists.length} playlists...`);
+  for (const [index, playlist] of playlists.entries()) {
     console.log(`Playlist ${index + 1}...`);
     const deleteResponse = await fetch(`${API_URL}/playlists/${playlist.id}`, {
       method: "DELETE",

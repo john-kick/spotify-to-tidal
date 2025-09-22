@@ -189,6 +189,7 @@ export async function getUserPlaylists(
     const result: SpotifyAPIUserPlaylists = await response.json();
 
     for (const item of result.items) {
+      console.log(`  Getting tracks from playlist ${item.name}...`);
       let allTracks: SpotifyPlaylistTrack[] = [];
       let trackNext: string | undefined = item.tracks.href;
       let trackCounter = 0;
