@@ -295,7 +295,7 @@ export async function getTracksFromISRC(
 
     const result: TidalAPITrackData = await response.json();
 
-    allTracks = allTracks.concat(result);
+    allTracks = allTracks.concat(result.data);
     await sleep(500); // Sleep to avoid 429
   }
 
