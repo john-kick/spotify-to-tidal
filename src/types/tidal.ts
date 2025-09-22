@@ -24,5 +24,7 @@ export type TidalAPIGetCurrentUserResponse = {
 };
 
 export type TidalAPIPostPlaylistResponse = {
-  id: string;
+  data: {
+    id: string;
+  };
 };

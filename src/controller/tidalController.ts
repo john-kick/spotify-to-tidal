@@ -438,13 +438,13 @@ export async function createPlaylist(
     return;
   }
 
-  const result: TidalAPIPostPlaylistResponse = await response.json();
-  if (!result.id) {
+  const { data }: TidalAPIPostPlaylistResponse = await response.json();
+  if (!data.id) {
     console.error("No playlist ID returned");
     return;
   }
-  console.log(`Playlist created with ID ${result.id}`);
-  return result.id;
+  console.log(`Playlist created with ID ${data.id}`);
+  return data.id;
 }
 
 async function handleErrorResult(
