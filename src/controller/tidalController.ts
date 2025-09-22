@@ -458,7 +458,7 @@ async function handleErrorResult(
 }
 
 async function getAllPlaylists(token: string): Promise<TidalAPIUserPlaylists> {
-  const userID = getUserID(token);
+  const userID = await getUserID(token);
 
   const userPlaylistsResponse = await fetch(
     `${API_URL}/playlists?countryCode=${COUNTRY_CODE}&filter[owners.id]=${userID}`,
@@ -474,6 +474,9 @@ async function getAllPlaylists(token: string): Promise<TidalAPIUserPlaylists> {
         `Could not get user playlists: (${error.code}) ${error.detail}`
       )
     );
+    throw new Error(
+      "Errors while getting playlists from Spotify. Please check the console for errors"
+    );
   }
 
   const userPlaylistsResult: TidalAPIUserPlaylists =
@@ -486,12 +489,16 @@ export async function removeAllPlaylists(req: Request, res: Response) {
   const token = req.cookies[TOKEN_COOKIE_KEY];
   const playlists = await getAllPlaylists(token);
 
-  playlists.data.forEach(async (playlist) => {
-    const deleteResponse = await fetch(`/playlist/${playlist.id}`, {
+  console.log(`Deleting ${playlists.data.length} playlists...`);
+  for (const [index, playlist] of playlists.data.entries()) {
+    console.log(`Playlist ${index+1}...`);
+    const deleteResponse = await fetch(`${API_URL}/playlists/${playlist.id}`, {
+      method: "DELETE",
       headers: { Authorization: `Bearer ${token}` }
     });
 
     if (!deleteResponse.ok) {
+      console.log(deleteResponse);
       const errResult: TidalAPIError = await deleteResponse.json();
       errResult.errors.forEach((error) =>
         console.error(
@@ -499,5 +506,9 @@ export async function removeAllPlaylists(req: Request, res: Response) {
         )
       );
     }
-  });
+
+    await sleep(500); // Avoid 429
+  }
+
+  res.status(200).send("OK");
 }
