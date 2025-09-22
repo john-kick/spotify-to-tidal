@@ -33,7 +33,8 @@ export function authorize(_req: Request, res: Response): void {
     response_type: "code",
     client_id: CLIENT_ID,
     client_secret: CLIENT_SECRET,
-    scope: "user-read-private user-read-email user-library-read",
+    scope:
+      "user-read-private user-read-email user-library-read playlist-read-private",
     redirect_uri: REDIRECT_URI,
     state
   }).toString();

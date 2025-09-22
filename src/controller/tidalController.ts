@@ -377,9 +377,10 @@ export async function createPlaylistsFromSpotifyPlaylists(
     );
 
     const chunkSize = 20;
+    let chunkCounter = 0;
     for (let i = 0; i < trackIDs.length; i += chunkSize) {
       const chunk = playlistData.slice(i, i + chunkSize);
-      console.log(`Chunk ${chunkSize / i + 1}...`);
+      console.log(`Chunk ${++chunkCounter}...`);
       const body = { data: chunk };
       const response = await fetch(
         `${API_URL}/playlists/${playlistID}/relationships/items`,
