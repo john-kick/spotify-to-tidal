@@ -1,10 +1,12 @@
 import type {
-  SpotifyTrack,
-  SpotifyError as SpotifyAPIError,
+  SpotifyAPICurrentUser,
+  SpotifyAPIError,
+  SpotifyAPIPlaylistItems,
+  SpotifyAPIUserPlaylists,
+  SpotifyAPIUserTracksResponse,
   SpotifyPlaylist,
-  SpotifyAPIUserPlaylistsObject,
-  SpotifyAPIPlaylistItemsObject,
-  SpotifyPlaylistTrack
+  SpotifyPlaylistTrack,
+  SpotifyTrack
 } from "@/types/spotify";
 import { generateRandomString } from "@/util";
 import { type Request, type Response } from "express";
@@ -121,11 +123,13 @@ export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
     });
 
     if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error("Failed to fetch liked songs: " + errorBody);
+      const errResult: SpotifyAPIError = await response.json();
+      throw new Error(
+        `Failed to fetch liked songs: (${errResult.error.status}) ${errResult.error.message}`
+      );
     }
 
-    const data = await response.json();
+    const data: SpotifyAPIUserTracksResponse = await response.json();
     const items = data.items || [];
 
     const tracks: SpotifyTrack[] = items.map((item: any) => ({
@@ -149,15 +153,14 @@ async function getUserID(token: string): Promise<string> {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  const result = await response.json();
-
-  if (result.error) {
-    const { error } = result.error as SpotifyAPIError;
+  if (!response.ok) {
+    const errResult: SpotifyAPIError = await response.json();
     throw new Error(
-      `HTTP error ${error.status} while getting user ID: ${error.message}`
+      `HTTP error ${errResult.error.status} while getting user ID: ${errResult.error.message}`
     );
   }
 
+  const result: SpotifyAPICurrentUser = await response.json();
   return result.id;
 }
 
@@ -167,7 +170,7 @@ export async function getUserPlaylists(
   console.log("Getting playlists of current user from Spotify...");
   let playlists: SpotifyPlaylist[] = [];
   const errors: SpotifyAPIError[] = [];
-  let next: string | null = `${API_URL}/me/playlists`;
+  let next: string | undefined = `${API_URL}/me/playlists`;
   let playlistCounter = 0;
 
   while (next) {
@@ -176,19 +179,18 @@ export async function getUserPlaylists(
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    const chunk = await response.json();
-
-    if (chunk.error) {
-      errors.push(chunk as SpotifyAPIError);
+    if (!response.ok) {
+      const errResult: SpotifyAPIError = await response.json();
+      errors.push(errResult);
       break;
     }
 
-    const chunkObject = chunk as SpotifyAPIUserPlaylistsObject;
+    const result: SpotifyAPIUserPlaylists = await response.json();
 
     const playlistObjects: SpotifyPlaylist[] = await Promise.all(
-      chunkObject.items.map(async (item): Promise<SpotifyPlaylist> => {
+      result.items.map(async (item): Promise<SpotifyPlaylist> => {
         let allTracks: SpotifyPlaylistTrack[] = [];
-        let trackNext: string | null = item.tracks.href;
+        let trackNext: string | undefined = item.tracks.href;
         let trackCounter = 0;
 
         while (trackNext) {
@@ -197,21 +199,22 @@ export async function getUserPlaylists(
             headers: { Authorization: `Bearer ${token}` }
           });
 
-          const result = await playlistTracksResponse.json();
-
-          if (result.error) {
-            errors.push(result.error as SpotifyAPIError);
+          if (!playlistTracksResponse.ok) {
+            const errResult = await playlistTracksResponse.json();
+            errors.push(errResult);
             break;
           }
 
-          const tracks = result as SpotifyAPIPlaylistItemsObject;
+          const playlistTracksResult: SpotifyAPIPlaylistItems =
+            await playlistTracksResponse.json();
+
           allTracks = allTracks.concat(
-            tracks.items.map((trackItem) => ({
+            playlistTracksResult.items.map((trackItem) => ({
               isrc: trackItem.track.external_ids.isrc,
               addedAt: trackItem.added_at
             }))
           );
-          trackNext = tracks.next;
+          trackNext = playlistTracksResult.next;
         }
 
         return {
@@ -225,7 +228,7 @@ export async function getUserPlaylists(
     );
     playlists = playlists.concat(playlistObjects);
 
-    next = chunk.next;
+    next = result.next;
   }
 
   return [playlists, errors];

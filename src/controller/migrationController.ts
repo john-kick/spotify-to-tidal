@@ -6,15 +6,11 @@ import {
 import {
   TOKEN_COOKIE_KEY as TIDAL_TOKEN_COOKIE_KEY,
   addTracksToLikedSongs,
-  createPlaylist,
   createPlaylistsFromSpotifyPlaylists,
   getTracksFromISRC
 } from "@/controller/tidalController";
-import type {
-  SpotifyError,
-  SpotifyPlaylist,
-  SpotifyTrack
-} from "@/types/spotify";
+import type { SpotifyTrack } from "@/types/spotify";
+import type { TidalAPIError } from "@/types/tidal";
 import { type Request, type Response } from "express";
 
 export default async function migrate(
@@ -24,9 +20,12 @@ export default async function migrate(
   try {
     const spotifyToken = req.cookies[SPOTIFY_TOKEN_COOKIE_KEY];
     const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
-    // await migrateLikedSongs(spotifyToken, tidalToken);
-    const data = await migratePlaylists(spotifyToken, tidalToken);
-    res.status(200).send(data);
+    const result = await migrateLikedSongs(spotifyToken, tidalToken);
+    if (result) {
+      res.status(400).send(result);
+      return;
+    }
+    res.status(200).send("OK");
   } catch (err) {
     console.error(err);
     res.status(500).json(err);
@@ -36,25 +35,28 @@ export default async function migrate(
 async function migrateLikedSongs(
   spotifyToken: string,
   tidalToken: string
-): Promise<void> {
+): Promise<TidalAPIError | undefined> {
   const spotifyTracks: SpotifyTrack[] = await getLikedSongs(spotifyToken);
-  const tidalTrackIDs = await getTracksFromISRC(
+  const { success, result } = await getTracksFromISRC(
     spotifyTracks.map((track) => track.isrc),
     tidalToken
   );
 
+  if (!success) {
+    const errResult = result as TidalAPIError;
+    return errResult;
+  }
+
+  const tidalTrackIDs = result as string[];
   addTracksToLikedSongs(tidalTrackIDs, tidalToken);
 }
 
 async function migratePlaylists(
   spotifyToken: string,
   tidalToken: string
-): Promise<unknown> {
+): Promise<void> {
   const [spotifyPlaylists, spotifyErrors] = await getUserPlaylists(
     spotifyToken
   );
-  return await createPlaylistsFromSpotifyPlaylists(
-    spotifyPlaylists,
-    tidalToken
-  );
+  await createPlaylistsFromSpotifyPlaylists(spotifyPlaylists, tidalToken);
 }

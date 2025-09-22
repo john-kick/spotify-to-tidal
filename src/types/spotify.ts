@@ -1,3 +1,10 @@
+export type SpotifyAPIError = {
+  error: {
+    status: number;
+    message: string;
+  };
+};
+
 export type SpotifyTrack = {
   id: string;
   title: string;
@@ -10,12 +17,6 @@ export type SpotifyPlaylistTrack = {
   addedAt: string;
 };
 
-export type SpotifyImage = {
-  url: string;
-  height: number;
-  width: number;
-};
-
 export type SpotifyPlaylist = {
   description: string;
   images: SpotifyImage[];
@@ -24,78 +25,39 @@ export type SpotifyPlaylist = {
   tracks: SpotifyPlaylistTrack[];
 };
 
-export type SpotifyError = {
-  error: {
-    status: number;
-    message: string;
-  };
-};
-
-export type SpotifyAPIImageObject = {
+export type SpotifyImage = {
   url: string;
   height: number;
   width: number;
 };
 
-export type SpotifyAPISimplifiedPlaylistObject = {
-  collaborative: boolean;
-  description: string;
-  external_urls: { spotify: string };
-  href: string;
-  id: string;
-  images: SpotifyAPIImageObject[];
-  name: string;
-  owner: {
-    external_urls: { spotify: string };
-    href: string;
-    id: string;
-    type: "user";
-    uri: string;
-    display_name: string | null;
-  };
-  public: boolean;
-  snapshot_id: string;
-  tracks: {
-    href: string;
-    total: number;
-  };
-  type: "playlist";
-  uri: string;
+export type SpotifyAPIUserTracksResponse = { items: any[]; next?: string };
+
+export type SpotifyAPICurrentUser = { id: string };
+
+export type SpotifyAPIUserPlaylists = {
+  items: {
+    tracks: { href: string };
+    description: string;
+    name: string;
+    images: {
+      url: string;
+      height: number;
+      width: number;
+    }[];
+    public: boolean;
+  }[];
+  next?: string;
 };
 
-export type SpotifyAPIUserPlaylistsObject = {
-  href: string;
-  limit: number;
-  offset: number;
-  next: string;
-  previous: string;
-  total: number;
-  items: SpotifyAPISimplifiedPlaylistObject[];
-};
-
-export type SpotifyAPIPlaylistItemsObject = {
-  href: string;
-  limit: number;
-  offset: number;
-  next: string | null;
-  previous: string | null;
-  total: number;
-  items: SpotifyAPIPlaylistTrackObject[];
-};
-
-export type SpotifyAPIPlaylistTrackObject = {
-  added_at: string;
-  added_by: {
-    external_urls: { spotify: string };
-    href: string;
-    id: string;
-    type: "user";
-    uri: string;
-  };
-  is_local: boolean;
-  track: {
-    external_ids: {
-      isrc: string;
+export type SpotifyAPIPlaylistItems = {
+  items: {
+    track: {
+      external_ids: {
+        isrc: string;
+      };
     };
-  };
+    added_at: string;
+  }[];
+  next?: string;
 };
