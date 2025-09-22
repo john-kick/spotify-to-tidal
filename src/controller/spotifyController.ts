@@ -188,46 +188,43 @@ export async function getUserPlaylists(
 
     const result: SpotifyAPIUserPlaylists = await response.json();
 
-    const playlistObjects: SpotifyPlaylist[] = await Promise.all(
-      result.items.map(async (item): Promise<SpotifyPlaylist> => {
-        let allTracks: SpotifyPlaylistTrack[] = [];
-        let trackNext: string | undefined = item.tracks.href;
-        let trackCounter = 0;
+    for (const item of result.items) {
+      let allTracks: SpotifyPlaylistTrack[] = [];
+      let trackNext: string | undefined = item.tracks.href;
+      let trackCounter = 0;
 
-        while (trackNext) {
-          console.log(`    Track chunk ${++trackCounter}...`);
-          const playlistTracksResponse = await fetch(trackNext, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+      while (trackNext) {
+        console.log(`    Track chunk ${++trackCounter}...`);
+        const playlistTracksResponse = await fetch(trackNext, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-          if (!playlistTracksResponse.ok) {
-            const errResult = await playlistTracksResponse.json();
-            errors.push(errResult);
-            break;
-          }
-
-          const playlistTracksResult: SpotifyAPIPlaylistItems =
-            await playlistTracksResponse.json();
-
-          allTracks = allTracks.concat(
-            playlistTracksResult.items.map((trackItem) => ({
-              isrc: trackItem.track.external_ids.isrc,
-              addedAt: trackItem.added_at
-            }))
-          );
-          trackNext = playlistTracksResult.next;
+        if (!playlistTracksResponse.ok) {
+          const errResult = await playlistTracksResponse.json();
+          errors.push(errResult);
+          break;
         }
 
-        return {
-          description: item.description,
-          images: item.images,
-          name: item.name,
-          tracks: allTracks,
-          public: item.public
-        } as SpotifyPlaylist;
-      })
-    );
-    playlists = playlists.concat(playlistObjects);
+        const playlistTracksResult: SpotifyAPIPlaylistItems =
+          await playlistTracksResponse.json();
+
+        allTracks = allTracks.concat(
+          playlistTracksResult.items.map((trackItem) => ({
+            isrc: trackItem.track.external_ids.isrc,
+            addedAt: trackItem.added_at
+          }))
+        );
+        trackNext = playlistTracksResult.next;
+      }
+
+      playlists.push({
+        description: item.description,
+        images: item.images,
+        name: item.name,
+        tracks: allTracks,
+        public: item.public
+      } as SpotifyPlaylist);
+    }
 
     next = result.next;
   }
