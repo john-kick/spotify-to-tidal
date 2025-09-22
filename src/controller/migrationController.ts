@@ -58,5 +58,10 @@ async function migratePlaylists(
   const [spotifyPlaylists, spotifyErrors] = await getUserPlaylists(
     spotifyToken
   );
+  spotifyErrors.forEach((spotifyError) => {
+    console.error(
+      `Error while getting user playlists: (${spotifyError.error.status}) ${spotifyError.error.status}`
+    );
+  });
   await createPlaylistsFromSpotifyPlaylists(spotifyPlaylists, tidalToken);
 }
