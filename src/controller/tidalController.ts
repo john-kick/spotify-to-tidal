@@ -185,13 +185,17 @@ export async function deleteAllLikedTracks(req: Request, res: Response) {
     const userID = await getUserID(token);
 
     let tracks: TidalAPITrackData[] = [];
+    let counter = 0;
     let next:
       | string
       | undefined = `${API_URL}/userCollections/${userID}/relationships/tracks`;
+    console.log("Getting liked tracks from Tidal...")
     while (next) {
-      const response = await fetch(next);
+      console.log(`Page ${++counter}...`)
+      const response = await fetch(next, {headers: {Authorization: `Bearer ${token}`}});
 
       if (!response.ok) {
+        console.log(response)
         const result: TidalAPIError = await response.json();
         result.errors.forEach((error) =>
           console.error(
@@ -208,7 +212,8 @@ export async function deleteAllLikedTracks(req: Request, res: Response) {
 
       const result: TidalAPITracks = await response.json();
       tracks = tracks.concat(result.data);
-      next = result.links.next ?? undefined;
+      next = result.links.next ? API_URL + result.links.next : undefined;
+      await sleep(500);
     }
 
     // Delete tracks in chunks of 20
@@ -247,6 +252,7 @@ export async function deleteAllLikedTracks(req: Request, res: Response) {
             "Error while deleting liked songs. See console for more details"
           );
       }
+      await sleep(500);
     }
     res.status(200).send("OK");
   } catch (err) {
