@@ -8,7 +8,7 @@ import {
   TOKEN_COOKIE_KEY as TIDAL_TOKEN_COOKIE_KEY,
   addTracksToLikedSongs,
   createPlaylistsFromSpotifyPlaylists,
-  getTracksFromISRC
+  getTracksFromSpotifyTracks
 } from "@/controller/tidalController";
 import type { SpotifyAPIAlbumItem, SpotifyTrack } from "@/types/spotify";
 import type { TidalAPIError } from "@/types/tidal";
@@ -61,11 +61,11 @@ async function migrateLikedSongs(
 
   // Sort the tracks in descending order of when it was added
   spotifyTracks.sort((a, b) => {
-    return b.addedAt - a.addedAt;
+    return a.addedAt - b.addedAt;
   });
 
-  const { success, result } = await getTracksFromISRC(
-    spotifyTracks.map((track) => track.isrc),
+  const { success, result } = await getTracksFromSpotifyTracks(
+    spotifyTracks,
     tidalToken
   );
 

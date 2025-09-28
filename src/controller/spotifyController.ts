@@ -7,7 +7,6 @@ import type {
   SpotifyAPIUserPlaylists,
   SpotifyAPIUserTracksResponse,
   SpotifyPlaylist,
-  SpotifyPlaylistTrack,
   SpotifyTrack
 } from "@/types/spotify";
 import { generateRandomString } from "@/util";
@@ -226,7 +225,7 @@ export async function getUserPlaylists(
         continue;
       }
       console.log(`  Getting tracks from playlist ${item.name}...`);
-      let allTracks: SpotifyPlaylistTrack[] = [];
+      let allTracks: SpotifyTrack[] = [];
       let trackNext: string | undefined = item.tracks.href;
       let trackCounter = 0;
 
@@ -247,8 +246,10 @@ export async function getUserPlaylists(
 
         allTracks = allTracks.concat(
           playlistTracksResult.items.map((trackItem) => ({
+            id: trackItem.track.id,
+            title: trackItem.track.name,
             isrc: trackItem.track.external_ids.isrc,
-            addedAt: trackItem.added_at
+            addedAt: new Date(trackItem.added_at).getTime()
           }))
         );
         trackNext = playlistTracksResult.next;

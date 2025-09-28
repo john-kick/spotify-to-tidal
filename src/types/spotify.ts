@@ -1,3 +1,5 @@
+import type { StringMappingType } from "typescript";
+
 export type SpotifyAPIError = {
   error: {
     status: number;
@@ -13,17 +15,12 @@ export type SpotifyTrack = {
   addedAt: number; // timestamp
 };
 
-export type SpotifyPlaylistTrack = {
-  isrc: string;
-  addedAt: string;
-};
-
 export type SpotifyPlaylist = {
   description: string;
   images: SpotifyImage[];
   name: string;
   public: boolean;
-  tracks: SpotifyPlaylistTrack[];
+  tracks: SpotifyTrack[];
 };
 
 export type SpotifyImage = {
@@ -67,6 +64,8 @@ export type SpotifyAPIUserPlaylists = {
 export type SpotifyAPIPlaylistItems = {
   items: {
     track: {
+      id: string;
+      name: string;
       external_ids: {
         isrc: string;
       };
