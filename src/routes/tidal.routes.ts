@@ -4,7 +4,8 @@ import {
   getLikedPlaylist,
   findTrack,
   addTrackToLikedTracks,
-  removeAllPlaylists
+  removeAllPlaylists,
+  deleteAllLikedTracks
 } from "@/controller/tidalController";
 import { Router } from "express";
 
@@ -17,6 +18,7 @@ router.get("/track", findTrack);
 
 router.post("/track", addTrackToLikedTracks);
 
+router.delete("/tracks", deleteAllLikedTracks);
 router.delete("/playlists", removeAllPlaylists);
 
 export default router;

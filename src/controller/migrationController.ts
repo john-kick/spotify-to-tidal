@@ -27,7 +27,10 @@ export default async function migrate(
     const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
 
     if (options.includes("tracks")) {
-      const errResult: TidalAPIError | undefined = await migrateLikedSongs(spotifyToken, tidalToken);
+      const errResult: TidalAPIError | undefined = await migrateLikedSongs(
+        spotifyToken,
+        tidalToken
+      );
       if (errResult) {
         errResult.errors.forEach((error) =>
           console.error(
@@ -55,6 +58,12 @@ async function migrateLikedSongs(
   tidalToken: string
 ): Promise<TidalAPIError | undefined> {
   const spotifyTracks: SpotifyTrack[] = await getLikedSongs(spotifyToken);
+
+  // Sort the tracks in descending order of when it was added
+  spotifyTracks.sort((a, b) => {
+    return b.addedAt - a.addedAt;
+  });
+
   const { success, result } = await getTracksFromISRC(
     spotifyTracks.map((track) => track.isrc),
     tidalToken

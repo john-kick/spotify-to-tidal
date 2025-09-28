@@ -8,8 +8,9 @@ export type SpotifyAPIError = {
 export type SpotifyTrack = {
   id: string;
   title: string;
-  artist: string;
+  // artist: string;
   isrc: string;
+  addedAt: number; // timestamp
 };
 
 export type SpotifyPlaylistTrack = {
@@ -31,7 +32,17 @@ export type SpotifyImage = {
   width: number;
 };
 
-export type SpotifyAPIUserTracksResponse = { items: any[]; next?: string };
+export type SpotifyAPIUserTracksResponse = {
+  items: {
+    track: {
+      id: string;
+      name: string;
+      external_ids: { isrc: string };
+    };
+    added_at: string;
+  }[];
+  next?: string;
+};
 
 export type SpotifyAPICurrentUser = { id: string };
 
@@ -70,4 +81,6 @@ export type SpotifyAPIAlbums = {
   next?: string;
 };
 
-export type SpotifyAPIAlbumItem = {};
+export type SpotifyAPIAlbumItem = {
+  added_at: string; // YYYY-MM-DDTHH:MM:SSZ
+};

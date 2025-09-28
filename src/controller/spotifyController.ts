@@ -151,11 +151,12 @@ export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
     const data: SpotifyAPIUserTracksResponse = await response.json();
     const items = data.items || [];
 
-    const tracks: SpotifyTrack[] = items.map((item: any) => ({
+    const tracks: SpotifyTrack[] = items.map((item) => ({
       id: item.track.id,
       title: item.track.name,
-      artist: item.track.artists.map((a: any) => a.name).join(", "),
-      isrc: item.track.external_ids.isrc
+      // artist: item.track.artists.map((a: any) => a.name).join(", "),
+      isrc: item.track.external_ids.isrc,
+      addedAt: new Date(item.added_at).getTime()
     }));
 
     allTracks = allTracks.concat(tracks);

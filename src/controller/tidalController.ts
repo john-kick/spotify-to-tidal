@@ -179,6 +179,38 @@ export async function addTrackToLikedTracks(req: Request, res: Response) {
   }
 }
 
+export async function deleteAllLikedTracks(req: Request, res: Response) {
+  try {
+    const token = req.cookies[TOKEN_COOKIE_KEY];
+    const userID = await getUserID(token);
+    const response = await fetch(
+      `${API_URL}/userCollections/${userID}/relationships/tracks`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const result: TidalAPIError = await response.json();
+      result.errors.forEach((error) =>
+        console.error(
+          `Error while deleting liked songs: (${error.code}) ${error.detail}`
+        )
+      );
+      res
+        .status(400)
+        .send("Error while deleting liked songs. See console for more details");
+    }
+    res.status(200).send("OK");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send(err);
+  }
+}
+
 export async function getLikedPlaylist(req: Request, res: Response) {
   try {
     const token = req.cookies[TOKEN_COOKIE_KEY];
