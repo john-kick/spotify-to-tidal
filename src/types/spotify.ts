@@ -64,3 +64,10 @@ export type SpotifyAPIPlaylistItems = {
   }[];
   next?: string;
 };
+
+export type SpotifyAPIAlbums = {
+  items: SpotifyAPIAlbumItem[];
+  next?: string;
+};
+
+export type SpotifyAPIAlbumItem = {};

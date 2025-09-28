@@ -29,7 +29,7 @@ app.get("/test", async (req, res) => {
     const spotifyToken = req.cookies[SPOTIFY_TOKEN_COOKIE_KEY];
     const spotifyTracks: SpotifyTrack[] = await getLikedSongs(spotifyToken);
     const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
-    const tidalTracks: string[] = await getTracksFromISRC(
+    const tidalTracks = await getTracksFromISRC(
       spotifyTracks.map((track) => track.isrc),
       tidalToken
     );
