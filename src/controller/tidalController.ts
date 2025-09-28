@@ -2,9 +2,7 @@ import type { SpotifyPlaylist, SpotifyTrack } from "@/types/spotify";
 import type {
   TidalAPIError,
   TidalAPIGetCurrentUserResponse,
-  TidalAPIGetUserTrackRelResponse,
   TidalAPIPostPlaylistResponse,
-  TidalAPIPostUserTrackRelResponse,
   TidalAPITrackData,
   TidalAPITracks,
   TidalAPIUserPlaylists,
