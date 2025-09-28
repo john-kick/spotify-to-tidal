@@ -183,26 +183,70 @@ export async function deleteAllLikedTracks(req: Request, res: Response) {
   try {
     const token = req.cookies[TOKEN_COOKIE_KEY];
     const userID = await getUserID(token);
-    const response = await fetch(
-      `${API_URL}/userCollections/${userID}/relationships/tracks`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
 
-    if (!response.ok) {
-      const result: TidalAPIError = await response.json();
-      result.errors.forEach((error) =>
-        console.error(
-          `Error while deleting liked songs: (${error.code}) ${error.detail}`
-        )
+    let tracks: TidalAPITrackData[] = [];
+    let next:
+      | string
+      | undefined = `${API_URL}/userCollections/${userID}/relationships/tracks`;
+    while (next) {
+      const response = await fetch(next);
+
+      if (!response.ok) {
+        const result: TidalAPIError = await response.json();
+        result.errors.forEach((error) =>
+          console.error(
+            `Error while deleting liked songs: (${error.code}) ${error.detail}`
+          )
+        );
+        res
+          .status(400)
+          .send(
+            "Error while deleting liked songs. See console for more details"
+          );
+        return;
+      }
+
+      const result: TidalAPITracks = await response.json();
+      tracks = tracks.concat(result.data);
+      next = result.links.next ?? undefined;
+    }
+
+    // Delete tracks in chunks of 20
+    console.log(`Deleting ${tracks.length} tracks...`);
+
+    for (let i = 0; i < tracks.length; i += 20) {
+      console.log(`Deleting tracks ${i}-${i + 20}...`);
+      const chunk = tracks.slice(i, i + 20);
+      const body = {
+        data: chunk.map((track) => {
+          return { id: track.id, type: "tracks" };
+        })
+      };
+      const deleteResponse = await fetch(
+        `${API_URL}/userCollections/${userID}/relationships/tracks`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/vnd.api+json"
+          },
+          body: JSON.stringify(body)
+        }
       );
-      res
-        .status(400)
-        .send("Error while deleting liked songs. See console for more details");
+
+      if (!deleteResponse.ok) {
+        const deleteResult: TidalAPIError = await deleteResponse.json();
+        deleteResult.errors.forEach((error) =>
+          console.error(
+            `Error while deleting liked songs: (${error.code}) ${error.detail}`
+          )
+        );
+        res
+          .status(400)
+          .send(
+            "Error while deleting liked songs. See console for more details"
+          );
+      }
     }
     res.status(200).send("OK");
   } catch (err) {

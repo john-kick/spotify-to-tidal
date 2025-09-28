@@ -9,6 +9,9 @@ export type TidalAPIError = {
 
 export type TidalAPITracks = {
   data: TidalAPITrackData[];
+  links: {
+    next: string | undefined;
+  };
 };
 
 export type TidalAPITrackData = {
