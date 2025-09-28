@@ -1,6 +1,7 @@
 import {
   TOKEN_COOKIE_KEY as SPOTIFY_TOKEN_COOKIE_KEY,
   getLikedSongs,
+  getSavedAlbums,
   getUserPlaylists
 } from "@/controller/spotifyController";
 import {
@@ -9,19 +10,39 @@ import {
   createPlaylistsFromSpotifyPlaylists,
   getTracksFromISRC
 } from "@/controller/tidalController";
-import type { SpotifyTrack } from "@/types/spotify";
+import type { SpotifyAPIAlbumItem, SpotifyTrack } from "@/types/spotify";
 import type { TidalAPIError } from "@/types/tidal";
 import { type Request, type Response } from "express";
+
+type MigrationOption = "tracks" | "albums" | "artists" | "playlists";
 
 export default async function migrate(
   req: Request,
   res: Response
 ): Promise<void> {
   try {
+    const { options }: { options: MigrationOption[] } = req.body;
+
     const spotifyToken = req.cookies[SPOTIFY_TOKEN_COOKIE_KEY];
     const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
-    // await migrateLikedSongs(spotifyToken, tidalToken);
-    await migratePlaylists(spotifyToken, tidalToken);
+
+    if (options.includes("tracks")) {
+      const errResult: TidalAPIError | undefined = await migrateLikedSongs(spotifyToken, tidalToken);
+      if (errResult) {
+        errResult.errors.forEach((error) =>
+          console.error(
+            `Error while migrating liked songs: (${error.code}) ${error.detail}`
+          )
+        );
+      }
+    }
+    if (options.includes("albums")) {
+    }
+    if (options.includes("artists")) {
+    }
+    if (options.includes("playlists")) {
+      await migratePlaylists(spotifyToken, tidalToken);
+    }
     res.status(200).send("OK");
   } catch (err) {
     console.error(err);
@@ -45,7 +66,24 @@ async function migrateLikedSongs(
   }
 
   const tidalTrackIDs = result as string[];
-  addTracksToLikedSongs(tidalTrackIDs, tidalToken);
+  const { success: addTracksSuccess, errorResult } =
+    await addTracksToLikedSongs(tidalTrackIDs, tidalToken);
+  if (!addTracksSuccess) {
+    if (!errorResult) {
+      console.error("Something went wrong!");
+      return undefined;
+    }
+    return errorResult;
+  }
+}
+
+async function migrateLikedAlbums(
+  spotifyToken: string,
+  tidalToken: string
+): Promise<void> {
+  const spotifyAlbums: SpotifyAPIAlbumItem[] = await getSavedAlbums(
+    spotifyToken
+  );
 }
 
 async function migratePlaylists(

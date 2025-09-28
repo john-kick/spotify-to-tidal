@@ -1,4 +1,6 @@
 import type {
+  SpotifyAPIAlbumItem,
+  SpotifyAPIAlbums,
   SpotifyAPICurrentUser,
   SpotifyAPIError,
   SpotifyAPIPlaylistItems,
@@ -108,6 +110,22 @@ export async function callback(req: Request, res: Response) {
   }
 }
 
+async function getUserID(token: string): Promise<string> {
+  const response = await fetch(`${API_URL}/me`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!response.ok) {
+    const errResult: SpotifyAPIError = await response.json();
+    throw new Error(
+      `HTTP error ${errResult.error.status} while getting user ID: ${errResult.error.message}`
+    );
+  }
+
+  const result: SpotifyAPICurrentUser = await response.json();
+  return result.id;
+}
+
 export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
   const limit = 50;
   let offset = 0;
@@ -149,20 +167,32 @@ export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
   return allTracks;
 }
 
-async function getUserID(token: string): Promise<string> {
-  const response = await fetch(`${API_URL}/me`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+export async function getSavedAlbums(
+  token: string
+): Promise<SpotifyAPIAlbumItem[]> {
+  console.log("Getting liked albums of current user from Spotify...");
+  let next: string | undefined = `${API_URL}/me/albums`;
+  let albumsData: SpotifyAPIAlbumItem[] = [];
+  let counter = 0;
+  while (next) {
+    console.log(`Album chunk ${++counter}`);
+    const response = await fetch(next, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
 
-  if (!response.ok) {
-    const errResult: SpotifyAPIError = await response.json();
-    throw new Error(
-      `HTTP error ${errResult.error.status} while getting user ID: ${errResult.error.message}`
-    );
+    if (!response.ok) {
+      const errResult: SpotifyAPIError = await response.json();
+      throw new Error(
+        `Could not get saved albums from Spotify: (${errResult.error.status}) ${errResult.error.message}`
+      );
+    }
+
+    const result: SpotifyAPIAlbums = await response.json();
+    albumsData = albumsData.concat(result.items);
+    next = result.next ?? undefined;
   }
 
-  const result: SpotifyAPICurrentUser = await response.json();
-  return result.id;
+  return albumsData;
 }
 
 export async function getUserPlaylists(

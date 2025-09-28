@@ -333,7 +333,10 @@ export async function addTracksToLikedSongs(
       `${API_URL}/userCollections/${userID}/relationships/tracks`,
       {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/vnd.api+json"
+        },
         body: JSON.stringify(body)
       }
     );
