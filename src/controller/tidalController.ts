@@ -8,7 +8,8 @@ import type {
   TidalAPITrackData,
   TidalAPITracks,
   TidalAPIUserPlaylists,
-  TidalAPIUserPlaylistsData
+  TidalAPIUserPlaylistsData,
+  TidalTrack
 } from "@/types/tidal";
 import { generateRandomString, generateS256challenge } from "@/util";
 import { sleep } from "bun";
@@ -225,8 +226,8 @@ async function getUserID(token: string): Promise<string | null> {
 export async function getTracksFromSpotifyTracks(
   spotifyTracks: SpotifyTrack[],
   token: string
-): Promise<{ success: boolean; result: TidalAPIError | string[] }> {
-  let allTidalTracks: TidalAPITrackData[] = [];
+): Promise<{ success: boolean; result: TidalAPIError | TidalTrack[] }> {
+  let allTidalTracks: TidalTrack[] = [];
   console.log(`Get ${spotifyTracks.length} tracks from Tidal...`);
 
   let chunkCounter = 0;
@@ -253,29 +254,44 @@ export async function getTracksFromSpotifyTracks(
 
     const result: TidalAPITracks = await response.json();
 
-    allTidalTracks = allTidalTracks.concat(result.data);
+    // Assign the tidal tracks the corresponding addedAt value
+    const tracks: TidalTrack[] = result.data.map((track) => {
+      const matchedTrack = spotifyTracks.find(
+        (sTrack) => sTrack.isrc === track.attributes.isrc
+      );
+
+      if (!matchedTrack) {
+        throw new Error("Something went wrong");
+      }
+
+      return {
+        id: track.id,
+        isrc: track.attributes.isrc,
+        addedAt: matchedTrack.addedAt
+      };
+    });
+
+    allTidalTracks = allTidalTracks.concat(tracks);
     await sleep(500); // Sleep to avoid 429
   }
 
   // Check if all tracks were found
   spotifyTracks.forEach((spotifyTrack) => {
     if (
-      !allTidalTracks
-        .map((tidalTrack) => tidalTrack.attributes.isrc)
-        .includes(spotifyTrack.isrc)
+      !allTidalTracks.map((track) => track.isrc).includes(spotifyTrack.isrc)
     ) {
       console.warn(`Track with ISRC ${spotifyTrack} was not found!`);
     }
   });
 
-  return { success: true, result: allTidalTracks.map((track) => track.id) };
+  return { success: true, result: allTidalTracks };
 }
 
 export async function addTracksToLikedSongs(
-  trackIDs: string[],
+  tracks: TidalTrack[],
   token: string
 ): Promise<{ success: boolean; errorResult?: TidalAPIError }> {
-  console.log(`Adding ${trackIDs.length} tracks to liked songs...`);
+  console.log(`Adding ${tracks.length} tracks to liked songs...`);
   const userID = await getUserID(token);
 
   if (!userID) {
@@ -283,12 +299,12 @@ export async function addTracksToLikedSongs(
   }
 
   let chunkCounter = 0;
-  for (let i = 0; i < trackIDs.length; i += 20) {
+  for (let i = 0; i < tracks.length; i += 20) {
     console.log(`Processing chunk ${++chunkCounter}...`);
-    const chunk = trackIDs.slice(i, i + 20);
+    const chunk = tracks.slice(i, i + 20);
 
     const body = {
-      data: chunk.map((trackID) => ({ id: trackID, type: "tracks" }))
+      data: chunk.map((track) => ({ id: track.id, type: "tracks" }))
     };
 
     const response = await fetch(
@@ -338,10 +354,10 @@ export async function createPlaylistsFromSpotifyPlaylists(
       continue;
     }
 
-    const trackIDs = result as string[];
-    console.log(`Searching IDs of ${trackIDs.length} tracks...`);
-    const playlistData = trackIDs.map((trackID) => ({
-      id: trackID,
+    const tTracks = result as TidalTrack[];
+    console.log(`Searching IDs of ${tTracks.length} tracks...`);
+    const playlistData = tTracks.map((track) => ({
+      id: track.id,
       type: "tracks"
     }));
 
@@ -351,7 +367,7 @@ export async function createPlaylistsFromSpotifyPlaylists(
 
     const chunkSize = 20;
     let chunkCounter = 0;
-    for (let i = 0; i < trackIDs.length; i += chunkSize) {
+    for (let i = 0; i < tTracks.length; i += chunkSize) {
       const chunk = playlistData.slice(i, i + chunkSize);
       console.log(`Chunk ${++chunkCounter}...`);
       const body = { data: chunk };

@@ -11,7 +11,7 @@ import {
   getTracksFromSpotifyTracks
 } from "@/controller/tidalController";
 import type { SpotifyAPIAlbumItem, SpotifyTrack } from "@/types/spotify";
-import type { TidalAPIError } from "@/types/tidal";
+import type { TidalAPIError, TidalTrack } from "@/types/tidal";
 import { type Request, type Response } from "express";
 
 type MigrationOption = "tracks" | "albums" | "artists" | "playlists";
@@ -57,12 +57,9 @@ async function migrateLikedSongs(
   spotifyToken: string,
   tidalToken: string
 ): Promise<TidalAPIError | undefined> {
-  const spotifyTracks: SpotifyTrack[] = await getLikedSongs(spotifyToken);
-
-  // Sort the tracks in descending order of when it was added
-  spotifyTracks.sort((a, b) => {
-    return a.addedAt - b.addedAt;
-  });
+  const spotifyTracks: SpotifyTrack[] = (
+    await getLikedSongs(spotifyToken)
+  ).reverse();
 
   const { success, result } = await getTracksFromSpotifyTracks(
     spotifyTracks,
@@ -74,9 +71,11 @@ async function migrateLikedSongs(
     return errResult;
   }
 
-  const tidalTrackIDs = result as string[];
+  const tidalTracks = (result as TidalTrack[]).sort(
+    (trackA, trackB) => trackB.addedAt - trackA.addedAt
+  );
   const { success: addTracksSuccess, errorResult } =
-    await addTracksToLikedSongs(tidalTrackIDs, tidalToken);
+    await addTracksToLikedSongs(tidalTracks, tidalToken);
   if (!addTracksSuccess) {
     if (!errorResult) {
       console.error("Something went wrong!");
