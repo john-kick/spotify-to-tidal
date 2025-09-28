@@ -56,6 +56,17 @@ document
   });
 
 document
+  .getElementById("delete-tracks")
+  .addEventListener("submit", function (event) {
+    event.preventDefault();
+    fetch("/tidal/tracks", {
+      method: "DELETE"
+    }).catch((error) => {
+      console.error("Error deleting liked tracks:", error);
+    });
+  });
+
+document
   .getElementById("delete-playlists")
   .addEventListener("submit", function (event) {
     event.preventDefault();
