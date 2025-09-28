@@ -253,21 +253,27 @@ export async function getTracksFromSpotifyTracks(
     const result: TidalAPITracks = await response.json();
 
     // Assign the tidal tracks the corresponding addedAt value
-    const tracks: TidalTrack[] = result.data.map((track) => {
-      const matchedTrack = spotifyTracks.find(
-        (sTrack) => sTrack.isrc === track.attributes.isrc
-      );
+    const tracks: TidalTrack[] = result.data
+      .map((track) => {
+        console.log(`Trying to find ${track.attributes.isrc}...`);
+        const matchedTrack = spotifyTracks.find(
+          (sTrack) => sTrack.isrc === track.attributes.isrc
+        );
 
-      if (!matchedTrack) {
-        throw new Error("Something went wrong");
-      }
+        if (!matchedTrack) {
+          console.warn("Not found!");
+          return null;
+        }
 
-      return {
-        id: track.id,
-        isrc: track.attributes.isrc,
-        addedAt: matchedTrack.addedAt
-      };
-    });
+        return {
+          id: track.id,
+          isrc: track.attributes.isrc,
+          addedAt: matchedTrack.addedAt
+        };
+      })
+      .filter((track) => {
+        return track !== null;
+      });
 
     allTidalTracks = allTidalTracks.concat(tracks);
     await sleep(500); // Sleep to avoid 429
