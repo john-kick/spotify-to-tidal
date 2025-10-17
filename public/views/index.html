@@ -13,6 +13,11 @@
 	<!-- Initially hidden -->
 	<main hidden>
 		<h1>Spotify to Tidal</h1>
+		<div id="logout-container">
+			<a href="/logout">
+				<button id="logout" class="danger">Logout</button>
+			</a>
+		</div>
 		<div id="page-content">
 			<div id="transfer-container">
 				<form id="migrate-form">
@@ -81,11 +86,11 @@
 			</div>
 
 			<div id="danger-zone">
-				<form id="delete-tracks" class="danger">
-					<button type="submit">Delete all Tidal liked tracks</button>
+				<form id="delete-tracks">
+					<button type="submit" class="danger">Delete all Tidal liked tracks</button>
 				</form>
-				<form id="delete-playlists" class="danger">
-					<button type="submit">
+				<form id="delete-playlists">
+					<button type="submit" class="danger">
 						Delete all Tidal playlists
 					</button>
 				</form>

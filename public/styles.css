@@ -17,6 +17,9 @@
   --color-text-secondary: #c5bfdc;
   --color-text-muted: #948ba9;
   --color-title: #d8c9ff;
+  --color-text-danger: #ffbfcb;
+  --color-text-success: #4ade80;
+  --color-text-warning: #facc15;
 
   /* === Tooltips === */
   --color-tooltip-bg: #201833;
@@ -234,13 +237,14 @@ input[type="checkbox"] {
   padding-top: 1.5rem;
 }
 
-.danger button {
+button.danger {
   background-color: var(--color-danger);
+  color: var(--color-text-danger);
   margin-top: 0.75rem;
   width: 100%;
 }
 
-.danger button:hover {
+button.danger:hover {
   background-color: var(--color-danger-hover);
 }
 
@@ -363,4 +367,12 @@ input[type="checkbox"] {
 .tooltip:hover .tooltiptext {
   visibility: visible;
   opacity: 1;
+}
+
+#logout-container {
+  position: absolute;
+  width: 100px;
+  height: 50px;
+  top: 1rem;
+  right: 1rem;
 }

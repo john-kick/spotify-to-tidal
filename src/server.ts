@@ -4,6 +4,8 @@ import tidalRouter from "@/routes/tidal.routes";
 import cookieParser from "cookie-parser";
 import express from "express";
 import path from "path";
+import { TOKEN_COOKIE_KEY as SPOTIFY_TOKEN_COOKIE_KEY } from "./controller/spotifyController";
+import { TOKEN_COOKIE_KEY as TIDAL_TOKEN_COOKIE_KEY } from "./controller/tidalController";
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -23,6 +25,11 @@ app.get("/", (req, res) =>
 app.get("/auth", (req, res) =>
   res.sendFile("public/views/auth.html", { root: path.join(__dirname, "..") })
 );
+app.get("/logout", (req, res) => {
+  res.clearCookie(SPOTIFY_TOKEN_COOKIE_KEY);
+  res.clearCookie(TIDAL_TOKEN_COOKIE_KEY);
+  res.redirect("/auth?logout=1");
+});
 
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
