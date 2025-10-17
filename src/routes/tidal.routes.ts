@@ -1,4 +1,5 @@
 import {
+  status,
   authorize,
   callback,
   deleteAllLikedTracks,
@@ -8,6 +9,7 @@ import { Router } from "express";
 
 const router = Router();
 
+router.get("/status", status);
 router.get("/auth", authorize);
 router.get("/callback", callback);
 

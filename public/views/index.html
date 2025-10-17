@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Spotify to Tidal</title>
+	<link rel="stylesheet" href="styles.css" />
+	<script src="scripts/main.js" defer></script>
+</head>
+
+<body>
+	<!-- Initially hidden -->
+	<main hidden>
+		<h1>Spotify to Tidal</h1>
+		<div id="page-content">
+			<div id="transfer-container">
+				<form id="migrate-form">
+					<div class="option-section">
+						<div class="topper">
+							<img src="images/heart.svg" />
+							<h2>Liked songs</h2>
+						</div>
+						<div class="options">
+							<div class="form-input">
+								<label for="tracks">Migrate liked songs</label>
+								<input type="checkbox" id="tracks" name="tracks" value="tracks" />
+							</div>
+							<div class="form-input">
+								<label for="chunking">Chunking</label>
+								<input type="checkbox" id="chunking" name="chunking" value="chunking" />
+							</div>
+						</div>
+					</div>
+					<div class="option-section">
+						<div class="topper">
+							<img src="images/list-music.svg" />
+							<h2>Playlists</h2>
+						</div>
+						<div class="options">
+							<div>
+								<div class="form-input">
+									<label for="playlists">Playlists</label>
+									<input type="checkbox" id="playlists" name="playlists" value="playlists" />
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="option-section disabled">
+						<div class="topper">
+							<img src="images/user.svg" />
+							<h2>Liked artists</h2>
+						</div>
+						<div class="options">
+							<div class="form-input">
+								<label for="artists">Liked artists</label>
+								<input type="checkbox" id="artists" name="artists" value="artists" disabled />
+							</div>
+						</div>
+						<div class="footer">
+							<p class="not-available-text">This option is not available yet</p>
+						</div>
+					</div>
+					<div class="option-section disabled">
+						<div class="topper">
+							<img src="images/compact-disc.svg" />
+							<h2>Liked albums</h2>
+						</div>
+						<div class="options">
+							<div class="form-input">
+								<label for="albums">Liked albums</label>
+								<input type="checkbox" id="albums" name="albums" value="albums" disabled />
+							</div>
+						</div>
+						<div class="footer">
+							<p class="not-available-text">This option is not available yet</p>
+						</div>
+					</div>
+				</form>
+				<a href="/migrate"><button>Migrate</button></a>
+			</div>
+
+			<div id="danger-zone">
+				<form id="delete-tracks" class="danger">
+					<button type="submit">Delete all Tidal liked tracks</button>
+				</form>
+				<form id="delete-playlists" class="danger">
+					<button type="submit">
+						Delete all Tidal playlists
+					</button>
+				</form>
+			</div>
+		</div>
+	</main>
+</body>
+
+</html>

@@ -23,6 +23,15 @@ export default async function migrate(
   try {
     const { options }: { options: MigrationOption[] } = req.body;
 
+    if (options.includes("albums")) {
+      res.status(400).send("Transferring liked albums is not supported yet.");
+      return;
+    }
+    if (options.includes("artists")) {
+      res.status(400).send("Transferring liked artists is not supported yet.");
+      return;
+    }
+
     const spotifyToken = req.cookies[SPOTIFY_TOKEN_COOKIE_KEY];
     const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
 
@@ -38,10 +47,6 @@ export default async function migrate(
           )
         );
       }
-    }
-    if (options.includes("albums")) {
-    }
-    if (options.includes("artists")) {
     }
     if (options.includes("playlists")) {
       await migratePlaylists(spotifyToken, tidalToken);
@@ -71,9 +76,7 @@ async function migrateLikedSongs(
     return errResult;
   }
 
-  const tidalTracks = (result as TidalTrack[]).sort(
-    (trackA, trackB) => trackB.addedAt - trackA.addedAt
-  );
+  const tidalTracks = result as TidalTrack[];
   const { success: addTracksSuccess, errorResult } =
     await addTracksToLikedSongs(tidalTracks, tidalToken);
   if (!addTracksSuccess) {

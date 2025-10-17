@@ -15,6 +15,7 @@ export type TidalAPITracks = {
 };
 
 export type TidalTrack = {
+	name?: string;
   id: string;
   isrc: string;
   addedAt: number; // Timestamp

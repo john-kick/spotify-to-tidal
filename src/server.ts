@@ -17,6 +17,13 @@ app.use("/migrate", migrationRouter);
 
 app.use(express.static(path.join(__dirname, "../public")));
 
+app.get("/", (req, res) =>
+  res.sendFile("public/views/index.html", { root: path.join(__dirname, "..") })
+);
+app.get("/auth", (req, res) =>
+  res.sendFile("public/views/auth.html", { root: path.join(__dirname, "..") })
+);
+
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });

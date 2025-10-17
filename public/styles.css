@@ -1,0 +1,366 @@
+:root {
+  /* === Brand === */
+  --color-primary: #7a2ff2; /* main purple */
+  --color-primary-hover: #8b3fff;
+  --color-primary-active: #6d2dd6;
+
+  /* === UI Base === */
+  --color-bg: #0f0d17;
+  --color-surface: #181422;
+  --color-surface-hover: #1f1a2d;
+  --color-surface-2: #221e33;
+  --color-border: #2d2640;
+  --color-shadow: rgba(122, 47, 242, 0.25);
+
+  /* === Text === */
+  --color-text: #f5f3ff;
+  --color-text-secondary: #c5bfdc;
+  --color-text-muted: #948ba9;
+  --color-title: #d8c9ff;
+
+  /* === Tooltips === */
+  --color-tooltip-bg: #201833;
+  --color-tooltip-text: #f3eefe;
+  --color-tooltip-border: #3a2b5e;
+  --color-tooltip-shadow: rgba(122, 47, 242, 0.25);
+
+  /* === Semantic === */
+  --color-danger: #8a1536;
+  --color-danger-hover: #ff729c;
+  --color-success: #137b50;
+  --color-warning: #facc15;
+
+  /* === Special === */
+  --color-spotify: #1db954;
+  --color-tidal: #000000;
+}
+
+/* Base styles */
+body {
+  font-family: system-ui, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-height: 100vh;
+}
+
+#page-content {
+  width: 90%;
+  max-width: 1200px;
+  padding: 2rem;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+/* Headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+  padding: 0;
+}
+
+h1 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background-color: var(--color-surface);
+  border-radius: 0 0 1rem 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Buttons */
+button {
+  background-color: #7a3cff;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+button:hover {
+  background-color: #9b5eff;
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  background-color: var(--color-border);
+  cursor: not-allowed;
+  transform: none;
+}
+
+#migrate-form {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  & > div {
+    flex: 1;
+  }
+}
+
+/* Option sections */
+.option-section {
+  background-color: var(--color-surface);
+  /* padding: 2rem; */
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 8px var(--color-shadow);
+}
+
+.option-section .topper {
+  margin-bottom: 0.5rem;
+  background-color: var(--color-surface-2);
+  border-radius: 10px 10px 0 0;
+  padding: 1rem;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.option-section .topper img {
+  height: 20px;
+  margin-right: 0.5rem;
+  margin-top: 2px;
+}
+
+/* .option-section .topper [type="checkbox"] {
+  position: relative;
+  left: 15px;
+  top: -4px;
+  z-index: 0;
+  -webkit-appearance: none;
+}
+.option-section .topper [type="checkbox"] + h2 {
+  position: absolute;
+}
+.option-section .topper [type="checkbox"] + h2::before {
+  width: 15px;
+  height: 15px;
+  border-radius: 5px;
+  border: 2px solid #8cad2d;
+  background-color: #fff;
+  display: block;
+  content: "";
+  float: left;
+  margin-right: 5px;
+  z-index: 5;
+  position: relative;
+}
+.option-section .topper [type="checkbox"]:checked + h2::before {
+  box-shadow: inset 0px 0px 0px 3px #fff;
+  background-color: #8cad2d;
+} */
+
+.option-section .options {
+  flex-grow: 1;
+  padding: 1rem;
+}
+
+.option-section .footer {
+  padding: 0.25rem 1rem;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.option-section.disabled {
+  opacity: 0.5;
+}
+
+.form-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+/* Checkboxes */
+input[type="checkbox"] {
+  accent-color: #a46cff;
+  width: 18px;
+  height: 18px;
+}
+
+/* Transfer container */
+#transfer-container {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+#transfer-container a {
+  text-decoration: none;
+}
+
+.not-available-text {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* Danger zone */
+#danger-zone {
+  margin-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1.5rem;
+}
+
+.danger button {
+  background-color: var(--color-danger);
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+.danger button:hover {
+  background-color: var(--color-danger-hover);
+}
+
+#logos {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  gap: 5rem;
+}
+
+#logos img {
+  height: 100px;
+}
+
+/* Auth buttons container */
+#auth-container {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  /* min-width: 800px; */
+}
+
+#auth-container .to-arrow {
+  height: 100px;
+  align-self: center;
+}
+
+.auth {
+  width: 300px;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+}
+
+.auth .image-container {
+  width: 150px;
+  height: 150px;
+  display: inline-flex;
+}
+
+.auth img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.action-container {
+  display: inline-flex;
+}
+
+.action-container img {
+  max-height: 100px;
+}
+
+.card {
+  background-color: var(--color-surface);
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 0 8px var(--color-shadow);
+  margin-bottom: 2rem;
+}
+
+#login-spotify {
+  background-color: var(--color-spotify);
+  color: black;
+}
+
+#login-tidal {
+  background-color: var(--color-tidal);
+  color: white;
+}
+
+#info-text {
+  color: var(--color-text);
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+/* Tooltip text */
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 300px;
+  background-color: var(--color-tooltip-bg);
+  color: var(--color-tooltip-text);
+  text-align: center;
+  padding: 5px 0;
+  border-radius: 6px;
+  border: 1px solid var(--color-tooltip-border);
+
+  /* Position the tooltip text */
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -150px;
+
+  /* Fade in tooltip */
+  opacity: 0;
+  transition: opacity 0.3s;
+  box-shadow: 0 4px 10px var(--color-tooltip-shadow);
+}
+
+/* Tooltip arrow */
+/* .tooltip .tooltiptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--color-tooltip-bg) transparent transparent transparent;
+}*/
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}

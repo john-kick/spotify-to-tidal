@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Spotify to Tidal</title>
+	<link rel="stylesheet" href="styles.css" />
+	<script src="scripts/auth.js" defer></script>
+</head>
+
+<body>
+	<!-- Initially hidden -->
+	<main hidden>
+		<h1>Spotify to Tidal</h1>
+		<div id="page-content">
+			<div id="auth-container">
+				<div id="spotify" class="auth card">
+					<div class="image-container">
+						<img src="images/spotify-logo-green.svg" alt="Spotify Logo" />
+					</div>
+					<div class="action-container">
+						<!-- Will be populated when checking for auth state -->
+					</div>
+				</div>
+				<img src="images/arrow-right.svg" alt="to" class="to-arrow" />
+				<div id="tidal" class="auth card">
+					<div class="image-container">
+						<img src="images/tidal-logo-white.svg" alt="Tidal Logo" />
+					</div>
+					<div class="action-container">
+						<!-- Will be populated when checking for auth state -->
+					</div>
+				</div>
+			</div>
+			<a href="/">
+				<button id="btn-continue" style="position: relative">Continue</button>
+			</a>
+			<p id="info-text">This is a service to migrate liked songs, playlists, liked artists, etc. from Spotify to Tidal.
+				<br />You need to log in to both Spotify and Tidal to use this application.
+			</p>
+		</div>
+	</main>
+</body>
+
+</html>

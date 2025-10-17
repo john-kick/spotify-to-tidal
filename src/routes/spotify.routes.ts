@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import {
+  status,
   authorize,
   callback,
   getLikedSongs,
@@ -8,6 +9,7 @@ import {
 
 const router = Router();
 
+router.get("/status", status);
 router.get("/auth", authorize);
 router.get("/callback", callback);
 router.get("/likedsongs", async (req: Request, res: Response) => {

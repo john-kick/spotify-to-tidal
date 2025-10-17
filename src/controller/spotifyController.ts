@@ -21,6 +21,15 @@ const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 const STATE_COOKIE_KEY = "spotify_auth_state";
 export const TOKEN_COOKIE_KEY = "spotify_access_token";
 
+export function status(req: Request, res: Response): void {
+  const token = req.cookies[TOKEN_COOKIE_KEY];
+  if (token) {
+    res.status(200).json({ authorized: true });
+  } else {
+    res.status(200).json({ authorized: false });
+  }
+}
+
 export function authorize(_req: Request, res: Response): void {
   if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
     res.status(500).send("Configuration incomplete");
@@ -103,7 +112,7 @@ export async function callback(req: Request, res: Response) {
       maxAge: expires_in * 1000
     });
 
-    res.redirect("/");
+    res.redirect("/auth");
   } catch (err) {
     res.status(500).json({ message: "Token request failed", error: err });
   }
@@ -126,7 +135,7 @@ async function getUserID(token: string): Promise<string> {
 }
 
 export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
-  const limit = 50;
+  const limit = 20;
   let offset = 0;
   let allTracks: SpotifyTrack[] = [];
   let hasNext = true;

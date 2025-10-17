@@ -25,6 +25,15 @@ const STATE_COOKIE_KEY = "tidal_auth_state";
 export const TOKEN_COOKIE_KEY = "tidal_access_token";
 const CODE_VERIFIER_KEY = "tidal_code_verifier";
 
+export function status(req: Request, res: Response): void {
+  const token = req.cookies[TOKEN_COOKIE_KEY];
+  if (token) {
+    res.status(200).json({ authorized: true });
+  } else {
+    res.status(200).json({ authorized: false });
+  }
+}
+
 export async function authorize(req: Request, res: Response) {
   if (!CLIENT_ID || !CLIENT_SECRET || !REDIRECT_URI) {
     return res.status(500).send("Configuration incomplete");
@@ -112,7 +121,7 @@ export async function callback(req: Request, res: Response) {
       maxAge: expires_in * 1000
     });
 
-    res.redirect("/");
+    res.redirect("/auth");
   } catch (err) {
     res.status(500).json({ message: "Token exchange failed", error: err });
   }
@@ -255,17 +264,16 @@ export async function getTracksFromSpotifyTracks(
     // Assign the tidal tracks the corresponding addedAt value
     const tracks: TidalTrack[] = result.data
       .map((track) => {
-        console.log(`Trying to find ${track.attributes.isrc}...`);
         const matchedTrack = spotifyTracks.find(
           (sTrack) => sTrack.isrc === track.attributes.isrc
         );
 
         if (!matchedTrack) {
-          console.warn("Not found!");
           return null;
         }
 
         return {
+          name: matchedTrack.title,
           id: track.id,
           isrc: track.attributes.isrc,
           addedAt: matchedTrack.addedAt
@@ -284,11 +292,16 @@ export async function getTracksFromSpotifyTracks(
     if (
       !allTidalTracks.map((track) => track.isrc).includes(spotifyTrack.isrc)
     ) {
-      console.warn(`Track with ISRC ${spotifyTrack} was not found!`);
+      console.warn(`Track with ISRC ${spotifyTrack.isrc} was not found!`);
     }
   });
 
-  return { success: true, result: allTidalTracks };
+  return {
+    success: true,
+    result: allTidalTracks.sort(
+      (trackA, trackB) => trackA.addedAt - trackB.addedAt
+    )
+  };
 }
 
 export async function addTracksToLikedSongs(
@@ -303,13 +316,16 @@ export async function addTracksToLikedSongs(
   }
 
   let chunkCounter = 0;
-  for (let i = 0; i < tracks.length; i += 20) {
+  for (let i = 0; i < tracks.length; i++) {
     console.log(`Processing chunk ${++chunkCounter}...`);
-    const chunk = tracks.slice(i, i + 20);
+    // Reverse the chunk
+    const chunk = tracks.slice(i, i + 1).reverse();
 
     const body = {
       data: chunk.map((track) => ({ id: track.id, type: "tracks" }))
     };
+
+    console.log(body.data);
 
     const response = await fetch(
       `${API_URL}/userCollections/${userID}/relationships/tracks`,
@@ -324,10 +340,11 @@ export async function addTracksToLikedSongs(
     );
 
     if (!response.ok) {
+      console.log(response);
       const errResult: TidalAPIError = await response.json();
       return { success: false, errorResult: errResult };
     }
-    await sleep(200);
+    await sleep(500);
   }
   return { success: true };
 }
