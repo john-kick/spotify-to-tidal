@@ -15,18 +15,21 @@
 		<h1>Spotify to Tidal</h1>
 		<div id="logout-container">
 			<a href="/logout">
-				<button id="logout" class="danger">Logout</button>
+				<button id="logout" class="danger tooltip tooltip-bottom-left">
+					<div class="tooltiptext">Logout from both Spotify and Tidal</div>
+					Logout
+				</button>
 			</a>
 		</div>
 		<div id="page-content">
 			<div id="transfer-container">
 				<form id="migrate-form">
-					<div class="option-section">
-						<div class="topper">
+					<div class="option-section card">
+						<div class="card-topper">
 							<img src="images/heart.svg" />
 							<h2>Liked songs</h2>
 						</div>
-						<div class="options">
+						<div class="options card-content">
 							<div class="form-input">
 								<label for="tracks">Migrate liked songs</label>
 								<input type="checkbox" id="tracks" name="tracks" value="tracks" />
@@ -37,12 +40,12 @@
 							</div>
 						</div>
 					</div>
-					<div class="option-section">
-						<div class="topper">
+					<div class="option-section card">
+						<div class="card-topper">
 							<img src="images/list-music.svg" />
 							<h2>Playlists</h2>
 						</div>
-						<div class="options">
+						<div class="options card-content">
 							<div>
 								<div class="form-input">
 									<label for="playlists">Playlists</label>
@@ -51,38 +54,43 @@
 							</div>
 						</div>
 					</div>
-					<div class="option-section disabled">
-						<div class="topper">
+					<div class="option-section card disabled">
+						<div class="card-topper">
 							<img src="images/user.svg" />
 							<h2>Liked artists</h2>
 						</div>
-						<div class="options">
+						<div class="options card-content">
 							<div class="form-input">
 								<label for="artists">Liked artists</label>
 								<input type="checkbox" id="artists" name="artists" value="artists" disabled />
 							</div>
 						</div>
-						<div class="footer">
+						<div class="card-footer">
 							<p class="not-available-text">This option is not available yet</p>
 						</div>
 					</div>
-					<div class="option-section disabled">
-						<div class="topper">
+					<div class="option-section card disabled">
+						<div class="card-topper">
 							<img src="images/compact-disc.svg" />
 							<h2>Liked albums</h2>
 						</div>
-						<div class="options">
+						<div class="options card-content">
 							<div class="form-input">
 								<label for="albums">Liked albums</label>
 								<input type="checkbox" id="albums" name="albums" value="albums" disabled />
 							</div>
 						</div>
-						<div class="footer">
+						<div class="card-footer">
 							<p class="not-available-text">This option is not available yet</p>
 						</div>
 					</div>
 				</form>
-				<a href="/migrate"><button>Migrate</button></a>
+				<a href="/migrate">
+					<button class="tooltip tooltip-bottom-right">
+						<span class="tooltiptext" id="migrate-tooltip">Select at least one option to migrate</span>
+						Migrate
+					</button>
+				</a>
 			</div>
 
 			<div id="danger-zone">

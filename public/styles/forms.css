@@ -1,0 +1,13 @@
+.form-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+/* Checkboxes */
+input[type="checkbox"] {
+  accent-color: #a46cff;
+  width: 18px;
+  height: 18px;
+}

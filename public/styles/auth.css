@@ -1,0 +1,70 @@
+#login-spotify {
+  background-color: var(--color-spotify);
+  color: black;
+}
+
+#login-tidal {
+  background-color: var(--color-tidal);
+  color: white;
+}
+
+#info-text {
+  color: var(--color-text);
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+#logos {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  gap: 5rem;
+}
+
+#logos img {
+  height: 100px;
+}
+
+/* Auth buttons container */
+#auth-container {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  /* min-width: 800px; */
+}
+
+#auth-container .to-arrow {
+  height: 100px;
+  align-self: center;
+}
+
+.auth {
+  width: 300px;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+}
+
+.auth .image-container {
+  width: 150px;
+  height: 150px;
+  display: inline-flex;
+}
+
+.auth img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.action-container {
+  display: inline-flex;
+}
+
+.action-container img {
+  max-height: 100px;
+}

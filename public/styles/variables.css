@@ -1,0 +1,39 @@
+:root {
+  /* === Brand === */
+  --color-primary: #7a2ff2; /* main purple */
+  --color-primary-hover: #8b3fff;
+  --color-primary-active: #6d2dd6;
+
+  /* === UI Base === */
+  --color-bg: #0f0d17;
+  --color-surface: #181422;
+  --color-surface-hover: #1f1a2d;
+  --color-surface-2: #221e33;
+  --color-border: #2d2640;
+  --color-shadow: rgba(122, 47, 242, 0.25);
+
+  /* === Text === */
+  --color-text: #f5f3ff;
+  --color-text-secondary: #c5bfdc;
+  --color-text-muted: #948ba9;
+  --color-title: #d8c9ff;
+  --color-text-danger: #ffbfcb;
+  --color-text-success: #4ade80;
+  --color-text-warning: #facc15;
+
+  /* === Tooltips === */
+  --color-tooltip-bg: #201833;
+  --color-tooltip-text: #f3eefe;
+  --color-tooltip-border: #3a2b5e;
+  --color-tooltip-shadow: rgba(122, 47, 242, 0.25);
+
+  /* === Semantic === */
+  --color-danger: #8a1536;
+  --color-danger-hover: #ff729c;
+  --color-success: #137b50;
+  --color-warning: #facc15;
+
+  /* === Special === */
+  --color-spotify: #1db954;
+  --color-tidal: #000000;
+}

@@ -1,0 +1,41 @@
+/* Buttons */
+button {
+  background-color: #7a3cff;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+button:hover {
+  background-color: #9b5eff;
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  background-color: var(--color-border);
+  cursor: not-allowed;
+  transform: none;
+}
+
+button.danger {
+  background-color: var(--color-danger);
+  color: var(--color-text-danger);
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+button.danger:hover {
+  background-color: var(--color-danger-hover);
+}
+button.danger:disabled {
+  background-color: var(--color-border);
+  color: var(--color-text-muted);
+}
