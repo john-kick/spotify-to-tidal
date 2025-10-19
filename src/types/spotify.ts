@@ -1,11 +1,14 @@
-import type { StringMappingType } from "typescript";
-
 export type SpotifyAPIError = {
   error: {
     status: number;
     message: string;
   };
 };
+
+export interface SpotifyAPIGetResponse {
+  items: any[];
+  next?: string;
+}
 
 export type SpotifyTrack = {
   id: string;
@@ -29,56 +32,58 @@ export type SpotifyImage = {
   width: number;
 };
 
-export type SpotifyAPIUserTracksResponse = {
-  items: {
-    track: {
-      id: string;
-      name: string;
-      external_ids: { isrc: string };
-    };
-    added_at: string;
-  }[];
-  next?: string;
+export interface SpotifyAPIUserTracks extends SpotifyAPIGetResponse {
+  items: SpotifyAPIUserTrack[];
+}
+
+export type SpotifyAPIUserTrack = {
+  track: {
+    id: string;
+    name: string;
+    external_ids: { isrc: string };
+  };
+  added_at: string;
 };
 
 export type SpotifyAPICurrentUser = { id: string };
 
-export type SpotifyAPIUserPlaylists = {
-  items: {
-    tracks: { href: string };
-    description: string;
+export interface SpotifyAPIUserPlaylists extends SpotifyAPIGetResponse {
+  items: SpotifyAPIUserPlaylist[];
+}
+
+export type SpotifyAPIUserPlaylist = {
+  tracks: { href: string };
+  description: string;
+  name: string;
+  images: {
+    url: string;
+    height: number;
+    width: number;
+  }[];
+  public: boolean;
+  owner: {
+    id: string;
+  };
+};
+
+export interface SpotifyAPIPlaylistItems extends SpotifyAPIGetResponse {
+  items: SpotifyAPIPlaylistItem[];
+}
+
+export type SpotifyAPIPlaylistItem = {
+  track: {
+    id: string;
     name: string;
-    images: {
-      url: string;
-      height: number;
-      width: number;
-    }[];
-    public: boolean;
-    owner: {
-      id: string;
+    external_ids: {
+      isrc: string;
     };
-  }[];
-  next?: string;
+  };
+  added_at: string;
 };
 
-export type SpotifyAPIPlaylistItems = {
-  items: {
-    track: {
-      id: string;
-      name: string;
-      external_ids: {
-        isrc: string;
-      };
-    };
-    added_at: string;
-  }[];
-  next?: string;
-};
-
-export type SpotifyAPIAlbums = {
+export interface SpotifyAPIAlbums extends SpotifyAPIGetResponse {
   items: SpotifyAPIAlbumItem[];
-  next?: string;
-};
+}
 
 export type SpotifyAPIAlbumItem = {
   added_at: string; // YYYY-MM-DDTHH:MM:SSZ

@@ -24,75 +24,82 @@
 		<div id="page-content">
 			<div id="transfer-container">
 				<form id="migrate-form">
-					<div class="option-section card">
-						<div class="card-topper">
-							<img src="images/heart.svg" />
-							<h2>Liked songs</h2>
-						</div>
-						<div class="options card-content">
-							<div class="form-input">
-								<label for="tracks">Migrate liked songs</label>
-								<input type="checkbox" id="tracks" name="tracks" value="tracks" />
+					<div id="options-container">
+						<div class="option-section card">
+							<div class="card-topper">
+								<img src="images/heart.svg" />
+								<h2>Liked songs</h2>
 							</div>
-							<div class="form-input">
-								<label for="chunking">Chunking</label>
-								<input type="checkbox" id="chunking" name="chunking" value="chunking" />
-							</div>
-						</div>
-					</div>
-					<div class="option-section card">
-						<div class="card-topper">
-							<img src="images/list-music.svg" />
-							<h2>Playlists</h2>
-						</div>
-						<div class="options card-content">
-							<div>
+							<div class="options card-content">
 								<div class="form-input">
-									<label for="playlists">Playlists</label>
-									<input type="checkbox" id="playlists" name="playlists" value="playlists" />
+									<label for="tracks">Migrate liked songs</label>
+									<input type="checkbox" id="tracks" name="tracks" value="tracks" />
+								</div>
+								<div class="form-input">
+									<label for="chunking">Chunking<div class="tooltip tooltip-bottom">
+											<img src="images/circle-information.svg">
+											<span class="tooltiptext">
+												With this option, your liked songs will be migrated in chunks, which speeds up the process. The
+												ordering of the songs will be roughly preserved, but not exact.
+												<br />
+												<br />
+												For exact ordering, disable this option.
+											</span>
+										</div>
+									</label>
+									<input type="checkbox" id="chunking" name="chunking" value="chunking" />
 								</div>
 							</div>
 						</div>
-					</div>
-					<div class="option-section card disabled">
-						<div class="card-topper">
-							<img src="images/user.svg" />
-							<h2>Liked artists</h2>
-						</div>
-						<div class="options card-content">
-							<div class="form-input">
-								<label for="artists">Liked artists</label>
-								<input type="checkbox" id="artists" name="artists" value="artists" disabled />
+						<div class="option-section card">
+							<div class="card-topper">
+								<img src="images/list-music.svg" />
+								<h2>Playlists</h2>
+							</div>
+							<div class="options card-content">
+								<div>
+									<div class="form-input">
+										<label for="playlists">Migrate playlists</label>
+										<input type="checkbox" id="playlists" name="playlists" value="playlists" />
+									</div>
+									<div class="form-input">
+										<label for="followed-playlists">Followed playlists</label>
+										<div class="tooltip tooltip-bottom">
+											<img src="images/circle-information.svg">
+											<span class="tooltiptext">
+												With this option, playlists that you follow but do not own will also be migrated.
+											</span>
+										</div>
+										<input type="checkbox" id="followed-playlists" name="followed-playlists"
+											value="followed-playlists" />
+									</div>
+								</div>
 							</div>
 						</div>
-						<div class="card-footer">
-							<p class="not-available-text">This option is not available yet</p>
-						</div>
-					</div>
-					<div class="option-section card disabled">
-						<div class="card-topper">
-							<img src="images/compact-disc.svg" />
-							<h2>Liked albums</h2>
-						</div>
-						<div class="options card-content">
-							<div class="form-input">
-								<label for="albums">Liked albums</label>
-								<input type="checkbox" id="albums" name="albums" value="albums" disabled />
+						<div class="option-section card disabled">
+							<div class="card-topper">
+								<img src="images/user.svg" />
+								<h2>Liked artists</h2>
+							</div>
+							<div class="options card-content">
+								<p class="not-available-text">This option is not available yet</p>
 							</div>
 						</div>
-						<div class="card-footer">
-							<p class="not-available-text">This option is not available yet</p>
+						<div class="option-section card disabled">
+							<div class="card-topper">
+								<img src="images/compact-disc.svg" />
+								<h2>Liked albums</h2>
+							</div>
+							<div class="options card-content">
+								<p class="not-available-text">This option is not available yet</p>
+							</div>
 						</div>
 					</div>
-				</form>
-				<a href="/migrate">
-					<button class="tooltip tooltip-bottom-right">
-						<span class="tooltiptext" id="migrate-tooltip">Select at least one option to migrate</span>
+					<button type="submit">
 						Migrate
 					</button>
-				</a>
+				</form>
 			</div>
-
 			<div id="danger-zone">
 				<form id="delete-tracks">
 					<button type="submit" class="danger">Delete all Tidal liked tracks</button>

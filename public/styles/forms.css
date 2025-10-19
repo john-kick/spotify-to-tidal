@@ -5,6 +5,16 @@
   margin-top: 0.5rem;
 }
 
+.form-input label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.form-input label .tooltip {
+  margin-left: 0.5rem;
+  display: flex-inline;
+}
+
 /* Checkboxes */
 input[type="checkbox"] {
   accent-color: #a46cff;

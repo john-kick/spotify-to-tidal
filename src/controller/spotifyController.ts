@@ -1,16 +1,18 @@
+import SpotifyConnector from "@/connector/spotifyConnector";
 import type {
   SpotifyAPIAlbumItem,
   SpotifyAPIAlbums,
   SpotifyAPICurrentUser,
   SpotifyAPIError,
+  SpotifyAPIPlaylistItem,
   SpotifyAPIPlaylistItems,
   SpotifyAPIUserPlaylists,
-  SpotifyAPIUserTracksResponse,
+  SpotifyAPIUserTracks,
   SpotifyPlaylist,
-  SpotifyTrack
+  SpotifyTrack,
 } from "@/types/spotify";
 import { generateRandomString } from "@/util";
-import { type Request, type Response } from "express";
+import { response, type Request, type Response } from "express";
 
 const AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";
 const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
@@ -20,6 +22,8 @@ const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 const STATE_COOKIE_KEY = "spotify_auth_state";
 export const TOKEN_COOKIE_KEY = "spotify_access_token";
+
+const connector: SpotifyConnector = new SpotifyConnector();
 
 export function status(req: Request, res: Response): void {
   const token = req.cookies[TOKEN_COOKIE_KEY];
@@ -46,7 +50,7 @@ export function authorize(_req: Request, res: Response): void {
     scope:
       "user-read-private user-read-email user-library-read playlist-read-private",
     redirect_uri: REDIRECT_URI,
-    state
+    state,
   }).toString();
 
   res.redirect(`${AUTHORIZE_ENDPOINT}?${queryParams}`);
@@ -78,7 +82,7 @@ export async function callback(req: Request, res: Response) {
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code: code as string,
-    redirect_uri: REDIRECT_URI
+    redirect_uri: REDIRECT_URI,
   });
 
   const encodedClientCreds = Buffer.from(
@@ -87,14 +91,14 @@ export async function callback(req: Request, res: Response) {
 
   const headers = {
     Authorization: `Basic ${encodedClientCreds}`,
-    "Content-Type": "application/x-www-form-urlencoded"
+    "Content-Type": "application/x-www-form-urlencoded",
   };
 
   try {
     const response = await fetch(TOKEN_ENDPOINT, {
       method: "POST",
       headers,
-      body: body.toString()
+      body: body.toString(),
     });
 
     if (!response.ok) {
@@ -109,7 +113,7 @@ export async function callback(req: Request, res: Response) {
     res.cookie(TOKEN_COOKIE_KEY, access_token, {
       httpOnly: true,
       secure: true,
-      maxAge: expires_in * 1000
+      maxAge: expires_in * 1000,
     });
 
     res.redirect("/auth");
@@ -119,9 +123,7 @@ export async function callback(req: Request, res: Response) {
 }
 
 async function getUserID(token: string): Promise<string> {
-  const response = await fetch(`${API_URL}/me`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const response = await connector.get("/me", token);
 
   if (!response.ok) {
     const errResult: SpotifyAPIError = await response.json();
@@ -135,146 +137,72 @@ async function getUserID(token: string): Promise<string> {
 }
 
 export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
-  const limit = 20;
-  let offset = 0;
-  let allTracks: SpotifyTrack[] = [];
-  let hasNext = true;
+  const userTracks = await connector.getPaginated<SpotifyAPIUserTracks>(
+    "/me/tracks",
+    token
+  );
 
-  console.log("Fetching liked songs from Spotify...");
-
-  while (hasNext) {
-    console.log(`Page ${offset / limit + 1}...`);
-    const queryString = `limit=${limit}&offset=${offset}`;
-    const response = await fetch(`${API_URL}/me/tracks?${queryString}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!response.ok) {
-      const errResult: SpotifyAPIError = await response.json();
-      throw new Error(
-        `Failed to fetch liked songs: (${errResult.error.status}) ${errResult.error.message}`
-      );
-    }
-
-    const data: SpotifyAPIUserTracksResponse = await response.json();
-    const items = data.items || [];
-
-    const tracks: SpotifyTrack[] = items.map((item) => ({
-      id: item.track.id,
-      title: item.track.name,
-      // artist: item.track.artists.map((a: any) => a.name).join(", "),
-      isrc: item.track.external_ids.isrc,
-      addedAt: new Date(item.added_at).getTime()
-    }));
-
-    allTracks = allTracks.concat(tracks);
-
-    hasNext = !!data.next;
-    offset += limit;
-  }
-
-  return allTracks;
+  return userTracks.map((item) => ({
+    id: item.track.id,
+    title: item.track.name,
+    isrc: item.track.external_ids.isrc,
+    addedAt: new Date(item.added_at).getTime(),
+  }));
 }
 
 export async function getSavedAlbums(
   token: string
 ): Promise<SpotifyAPIAlbumItem[]> {
-  console.log("Getting liked albums of current user from Spotify...");
-  let next: string | undefined = `${API_URL}/me/albums`;
-  let albumsData: SpotifyAPIAlbumItem[] = [];
-  let counter = 0;
-  while (next) {
-    console.log(`Album chunk ${++counter}`);
-    const response = await fetch(next, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!response.ok) {
-      const errResult: SpotifyAPIError = await response.json();
-      throw new Error(
-        `Could not get saved albums from Spotify: (${errResult.error.status}) ${errResult.error.message}`
-      );
-    }
-
-    const result: SpotifyAPIAlbums = await response.json();
-    albumsData = albumsData.concat(result.items);
-    next = result.next ?? undefined;
-  }
-
-  return albumsData;
+  return await connector.getPaginated<SpotifyAPIAlbums>("/me/albums", token);
 }
 
 export async function getUserPlaylists(
-  token: string
-): Promise<[SpotifyPlaylist[], SpotifyAPIError[]]> {
-  console.log("Getting playlists of current user from Spotify...");
-  const userID = await getUserID(token);
-  let playlists: SpotifyPlaylist[] = [];
-  const errors: SpotifyAPIError[] = [];
-  let next: string | undefined = `${API_URL}/me/playlists`;
-  let playlistCounter = 0;
+  token: string,
+  includeFollowedPlaylists: boolean
+): Promise<SpotifyPlaylist[]> {
+  let responsePlaylists = await connector.getPaginated<SpotifyAPIUserPlaylists>(
+    "/me/playlists",
+    token
+  );
 
-  while (next) {
-    console.log(`Playlist chunk ${++playlistCounter}...`);
-    const response: globalThis.Response = await fetch(next, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!response.ok) {
-      const errResult: SpotifyAPIError = await response.json();
-      errors.push(errResult);
-      break;
-    }
-
-    const result: SpotifyAPIUserPlaylists = await response.json();
-
-    for (const item of result.items) {
-      if (item.owner.id !== userID) {
-        console.log(`Skipping playlist ${item.name}`);
-        continue;
-      }
-      console.log(`  Getting tracks from playlist ${item.name}...`);
-      let allTracks: SpotifyTrack[] = [];
-      let trackNext: string | undefined = item.tracks.href;
-      let trackCounter = 0;
-
-      while (trackNext) {
-        console.log(`    Track chunk ${++trackCounter}...`);
-        const playlistTracksResponse = await fetch(trackNext, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (!playlistTracksResponse.ok) {
-          const errResult = await playlistTracksResponse.json();
-          errors.push(errResult);
-          break;
-        }
-
-        const playlistTracksResult: SpotifyAPIPlaylistItems =
-          await playlistTracksResponse.json();
-
-        allTracks = allTracks.concat(
-          playlistTracksResult.items.map((trackItem) => ({
-            id: trackItem.track.id,
-            title: trackItem.track.name,
-            isrc: trackItem.track.external_ids.isrc,
-            addedAt: new Date(trackItem.added_at).getTime()
-          }))
-        );
-        trackNext = playlistTracksResult.next;
-      }
-
-      playlists.push({
-        description: item.description,
-        images: item.images,
-        name: item.name,
-        tracks: allTracks,
-        public: item.public
-      } as SpotifyPlaylist);
-    }
-
-    next = result.next;
+  if (!includeFollowedPlaylists) {
+    const userID = await getUserID(token);
+    responsePlaylists = responsePlaylists.filter(
+      (playlist) => playlist.owner.id === userID
+    );
   }
 
-  return [playlists, errors];
+  // Convert the tracks object
+  let playlists: SpotifyPlaylist[] = [];
+
+  for (const playlist of responsePlaylists) {
+    let tracks: SpotifyAPIPlaylistItem[] =
+      await connector.getPaginated<SpotifyAPIPlaylistItems>(
+        playlist.tracks.href,
+        token
+      );
+
+    tracks = tracks.filter((item) => item.track !== null);
+
+    playlists.push({
+      name: playlist.name,
+      description: playlist.description,
+      images: playlist.images,
+      public: playlist.public,
+      tracks: tracks.map((item) => ({
+        id: item.track.id,
+        title: item.track.name,
+        isrc: item.track.external_ids.isrc,
+        addedAt: new Date(item.added_at).getTime(),
+      })),
+    });
+  }
+
+  return playlists.map((playlist) => ({
+    name: playlist.name,
+    description: playlist.description,
+    images: playlist.images,
+    public: playlist.public,
+    tracks: playlist.tracks,
+  }));
 }

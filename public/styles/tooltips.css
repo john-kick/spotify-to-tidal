@@ -1,13 +1,20 @@
 @import "variables.css";
 
 /* Base tooltip text */
+.tooltip {
+  /* ensure the absolutely-positioned .tooltiptext is positioned
+     relative to the tooltip container regardless of element type */
+  position: relative;
+  display: inline-block;
+}
+
 .tooltip .tooltiptext {
   visibility: hidden;
   width: 300px;
   background-color: var(--color-tooltip-bg);
   color: var(--color-tooltip-text);
   text-align: center;
-  padding: 5px 0;
+  padding: 5px 10px;
   border-radius: 6px;
   border: 1px solid var(--color-tooltip-border);
   position: absolute;
@@ -30,6 +37,13 @@
   border-width: 5px;
   border-style: solid;
   border-color: var(--color-tooltip-bg) transparent transparent transparent;
+}
+
+/* Tooltip image styling */
+.tooltip img {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 /* === POSITIONING CLASSES === */

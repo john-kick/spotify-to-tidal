@@ -7,15 +7,17 @@ export type TidalAPIError = {
   ];
 };
 
-export type TidalAPITracks = {
+export interface TidalAPIGetResponse {
+  data: any;
+  links: { next: string | undefined };
+}
+
+export interface TidalAPITracks extends TidalAPIGetResponse {
   data: TidalAPITrackData[];
-  links: {
-    next: string | undefined;
-  };
-};
+}
 
 export type TidalTrack = {
-	name?: string;
+  name?: string;
   id: string;
   isrc: string;
   addedAt: number; // Timestamp
@@ -26,10 +28,9 @@ export type TidalAPITrackData = {
   attributes: { isrc: string };
 };
 
-export type TidalAPIGetUserTrackRelResponse = {
+export interface TidalAPIGetUserTrackRelResponse extends TidalAPIGetResponse {
   data: any[];
-  links: { next: string };
-};
+}
 export type TidalAPIPostUserTrackRelResponse = any;
 
 export type TidalAPIGetCurrentUserResponse = {
@@ -44,12 +45,9 @@ export type TidalAPIPostPlaylistResponse = {
   };
 };
 
-export type TidalAPIUserPlaylists = {
+export interface TidalAPIUserPlaylists extends TidalAPIGetResponse {
   data: TidalAPIUserPlaylistsData[];
-  links: {
-    next: string;
-  };
-};
+}
 
 export type TidalAPIUserPlaylistsData = {
   id: string;

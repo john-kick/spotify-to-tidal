@@ -24,8 +24,8 @@
 }
 
 .card-topper img {
-  max-height: 50px;
-  max-width: 50px;
+  max-height: 25px;
+  margin-right: 0.5rem;
 }
 
 .card-content {

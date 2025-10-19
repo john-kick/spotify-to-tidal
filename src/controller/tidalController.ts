@@ -1,18 +1,16 @@
+import TidalConnector from "@/connector/tidalConnector";
 import type { SpotifyPlaylist, SpotifyTrack } from "@/types/spotify";
 import type {
   TidalAPIError,
   TidalAPIGetCurrentUserResponse,
   TidalAPIPostPlaylistResponse,
-  TidalAPITrackData,
   TidalAPITracks,
   TidalAPIUserPlaylists,
   TidalAPIUserPlaylistsData,
-  TidalTrack
+  TidalTrack,
 } from "@/types/tidal";
 import { generateRandomString, generateS256challenge } from "@/util";
-import { sleep } from "bun";
 import type { Request, Response } from "express";
-type FetchResponse = globalThis.Response;
 
 const CLIENT_ID = process.env.TIDAL_CLIENT_ID;
 const CLIENT_SECRET = process.env.TIDAL_CLIENT_SECRET;
@@ -20,10 +18,17 @@ const REDIRECT_URI = process.env.TIDAL_REDIRECT_URI;
 const COUNTRY_CODE = process.env.COUNTRY_CODE || "DE";
 const AUTHORIZATION_ENDPOINT = "https://login.tidal.com/authorize";
 const TOKEN_ENDPOINT = "https://auth.tidal.com/v1/oauth2/token";
+<<<<<<< Updated upstream
 const API_URL = "https://openapi.tidal.com/v2";
+=======
+const CHUNK_SIZE = 20;
+
+>>>>>>> Stashed changes
 const STATE_COOKIE_KEY = "tidal_auth_state";
 export const TOKEN_COOKIE_KEY = "tidal_access_token";
 const CODE_VERIFIER_KEY = "tidal_code_verifier";
+
+const connector: TidalConnector = new TidalConnector();
 
 export function status(req: Request, res: Response): void {
   const token = req.cookies[TOKEN_COOKIE_KEY];
@@ -55,7 +60,7 @@ export async function authorize(req: Request, res: Response) {
     scope,
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
-    state
+    state,
   };
 
   const encodedQuery = new URLSearchParams(queryParams).toString();
@@ -96,14 +101,14 @@ export async function callback(req: Request, res: Response) {
     client_secret: CLIENT_SECRET,
     code: code as string,
     redirect_uri: REDIRECT_URI,
-    code_verifier: codeVerifier
+    code_verifier: codeVerifier,
   });
 
   try {
     const response = await fetch(TOKEN_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: body.toString()
+      body: body.toString(),
     });
 
     if (!response.ok) {
@@ -118,7 +123,7 @@ export async function callback(req: Request, res: Response) {
     res.cookie(TOKEN_COOKIE_KEY, access_token, {
       httpOnly: true,
       secure: true,
-      maxAge: expires_in * 1000
+      maxAge: expires_in * 1000,
     });
 
     res.redirect("/auth");
@@ -132,39 +137,10 @@ export async function deleteAllLikedTracks(req: Request, res: Response) {
     const token = req.cookies[TOKEN_COOKIE_KEY];
     const userID = await getUserID(token);
 
-    let tracks: TidalAPITrackData[] = [];
-    let counter = 0;
-    let next:
-      | string
-      | undefined = `${API_URL}/userCollections/${userID}/relationships/tracks`;
-    console.log("Getting liked tracks from Tidal...");
-    while (next) {
-      console.log(`Page ${++counter}...`);
-      const response = await fetch(next, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!response.ok) {
-        console.log(response);
-        const result: TidalAPIError = await response.json();
-        result.errors.forEach((error) =>
-          console.error(
-            `Error while deleting liked songs: (${error.code}) ${error.detail}`
-          )
-        );
-        res
-          .status(400)
-          .send(
-            "Error while deleting liked songs. See console for more details"
-          );
-        return;
-      }
-
-      const result: TidalAPITracks = await response.json();
-      tracks = tracks.concat(result.data);
-      next = result.links.next ? API_URL + result.links.next : undefined;
-      await sleep(500);
-    }
+    const tracks = await connector.getPaginated<TidalAPITracks>(
+      `/userCollections/${userID}/relationships/tracks`,
+      token
+    );
 
     // Delete tracks in chunks of 20
     console.log(`Deleting ${tracks.length} tracks...`);
@@ -175,18 +151,14 @@ export async function deleteAllLikedTracks(req: Request, res: Response) {
       const body = {
         data: chunk.map((track) => {
           return { id: track.id, type: "tracks" };
-        })
+        }),
       };
-      const deleteResponse = await fetch(
-        `${API_URL}/userCollections/${userID}/relationships/tracks`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/vnd.api+json"
-          },
-          body: JSON.stringify(body)
-        }
+      const deleteResponse = await connector.delete(
+        `/userCollections/${userID}/relationships/tracks`,
+        token,
+        {},
+        body,
+        "application/vnd.api+json"
       );
 
       if (!deleteResponse.ok) {
@@ -202,7 +174,6 @@ export async function deleteAllLikedTracks(req: Request, res: Response) {
             "Error while deleting liked songs. See console for more details"
           );
       }
-      await sleep(500);
     }
     res.status(200).send("OK");
   } catch (err) {
@@ -212,9 +183,7 @@ export async function deleteAllLikedTracks(req: Request, res: Response) {
 }
 
 async function getUserID(token: string): Promise<string | null> {
-  const response = await fetch(`${API_URL}/users/me`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const response = await connector.get("/users/me", token);
 
   if (!response.ok) {
     const errResult: TidalAPIError = await response.json();
@@ -242,11 +211,9 @@ export async function getTracksFromSpotifyTracks(
     console.log(`Chunk ${++chunkCounter}...`);
     const chunk = spotifyTracks.slice(i, i + 20);
 
-    const queryString = chunk
-      .map((track) => `filter[isrc]=${track.isrc.toUpperCase()}`)
-      .join("&");
-    const response = await fetch(`${API_URL}/tracks?${queryString}`, {
-      headers: { Authorization: `Bearer ${token}` }
+    const isrcs = chunk.map((track) => track.isrc.toUpperCase());
+    const response = await connector.get("/tracks", token, {
+      "filter[isrc]": isrcs,
     });
 
     if (!response.ok) {
@@ -276,7 +243,7 @@ export async function getTracksFromSpotifyTracks(
           name: matchedTrack.title,
           id: track.id,
           isrc: track.attributes.isrc,
-          addedAt: matchedTrack.addedAt
+          addedAt: matchedTrack.addedAt,
         };
       })
       .filter((track) => {
@@ -284,7 +251,6 @@ export async function getTracksFromSpotifyTracks(
       });
 
     allTidalTracks = allTidalTracks.concat(tracks);
-    await sleep(500); // Sleep to avoid 429
   }
 
   // Check if all tracks were found
@@ -300,13 +266,14 @@ export async function getTracksFromSpotifyTracks(
     success: true,
     result: allTidalTracks.sort(
       (trackA, trackB) => trackA.addedAt - trackB.addedAt
-    )
+    ),
   };
 }
 
 export async function addTracksToLikedSongs(
   tracks: TidalTrack[],
-  token: string
+  token: string,
+  chunked: boolean = false
 ): Promise<{ success: boolean; errorResult?: TidalAPIError }> {
   console.log(`Adding ${tracks.length} tracks to liked songs...`);
   const userID = await getUserID(token);
@@ -316,35 +283,29 @@ export async function addTracksToLikedSongs(
   }
 
   let chunkCounter = 0;
-  for (let i = 0; i < tracks.length; i++) {
+  // chunked = false -> reduce chunk size to 1 to synchronize each track separately. This ensures correct ordering.
+  const chunkSize = chunked ? CHUNK_SIZE : 1;
+  for (let i = 0; i < tracks.length; i += chunkSize) {
     console.log(`Processing chunk ${++chunkCounter}...`);
     // Reverse the chunk
-    const chunk = tracks.slice(i, i + 1).reverse();
+    const chunk = tracks.slice(i, i + chunkSize).reverse();
 
     const body = {
-      data: chunk.map((track) => ({ id: track.id, type: "tracks" }))
+      data: chunk.map((track) => ({ id: track.id, type: "tracks" })),
     };
 
-    console.log(body.data);
-
-    const response = await fetch(
-      `${API_URL}/userCollections/${userID}/relationships/tracks`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/vnd.api+json"
-        },
-        body: JSON.stringify(body)
-      }
+    const response = await connector.post(
+      `/userCollections/${userID}/relationships/tracks`,
+      token,
+      {},
+      body,
+      "application/vnd.api+json"
     );
 
     if (!response.ok) {
-      console.log(response);
       const errResult: TidalAPIError = await response.json();
       return { success: false, errorResult: errResult };
     }
-    await sleep(500);
   }
   return { success: true };
 }
@@ -379,7 +340,7 @@ export async function createPlaylistsFromSpotifyPlaylists(
     console.log(`Searching IDs of ${tTracks.length} tracks...`);
     const playlistData = tTracks.map((track) => ({
       id: track.id,
-      type: "tracks"
+      type: "tracks",
     }));
 
     console.log(
@@ -392,16 +353,12 @@ export async function createPlaylistsFromSpotifyPlaylists(
       const chunk = playlistData.slice(i, i + chunkSize);
       console.log(`Chunk ${++chunkCounter}...`);
       const body = { data: chunk };
-      const response = await fetch(
-        `${API_URL}/playlists/${playlistID}/relationships/items`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/vnd.api+json"
-          },
-          body: JSON.stringify(body)
-        }
+      const response = await connector.post(
+        `/playlists/${playlistID}/relationships/items`,
+        token,
+        {},
+        body,
+        "application/vnd.api+json"
       );
 
       if (!response.ok) {
@@ -413,7 +370,6 @@ export async function createPlaylistsFromSpotifyPlaylists(
         );
         continue;
       }
-      await sleep(200);
     }
   }
 }
@@ -428,22 +384,18 @@ export async function createPlaylist(
       attributes: {
         accessType: playlist.public ? "PUBLIC" : "UNLISTED",
         description: playlist.description,
-        name: playlist.name
+        name: playlist.name,
       },
-      type: "playlists"
-    }
+      type: "playlists",
+    },
   };
 
-  const response = await fetch(
-    `${API_URL}/playlists?countryCode=${COUNTRY_CODE}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/vnd.api+json"
-      },
-      body: JSON.stringify(body)
-    }
+  const response = await connector.post(
+    "/playlists",
+    token,
+    { countryCode: COUNTRY_CODE },
+    body,
+    "application/vnd.api+json"
   );
 
   if (!response.ok) {
@@ -465,51 +417,12 @@ export async function createPlaylist(
   return data.id;
 }
 
-async function handleErrorResult(
-  fetchResponse: FetchResponse,
-  expressResponse: Response
-): Promise<void> {
-  const errResult: TidalAPIError = await fetchResponse.json();
-  expressResponse.status(fetchResponse.status).send(errResult.errors);
-}
-
 async function getAllPlaylists(
   token: string
 ): Promise<TidalAPIUserPlaylistsData[]> {
   const userID = await getUserID(token);
-  let userPlaylistsResults: TidalAPIUserPlaylistsData[] = [];
-  let next:
-    | string
-    | undefined = `${API_URL}/playlists?countryCode=${COUNTRY_CODE}&filter[owners.id]=${userID}`;
-
-  while (next) {
-    const userPlaylistsResponse = await fetch(next, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!userPlaylistsResponse.ok) {
-      const errResult: TidalAPIError = await userPlaylistsResponse.json();
-      errResult.errors.forEach((error) =>
-        console.error(
-          `Could not get user playlists: (${error.code}) ${error.detail}`
-        )
-      );
-      throw new Error(
-        "Errors while getting playlists from Spotify. Please check the console for errors"
-      );
-    }
-
-    const userPlaylistsResult: TidalAPIUserPlaylists =
-      await userPlaylistsResponse.json();
-    userPlaylistsResults = userPlaylistsResults.concat(
-      userPlaylistsResult.data
-    );
-    next = userPlaylistsResult.links.next
-      ? API_URL + userPlaylistsResult.links.next
-      : undefined;
-  }
-
-  return userPlaylistsResults;
+  const path = `/playlists?countryCode=${COUNTRY_CODE}&filter[owners.id]=${userID}`;
+  return await connector.getPaginated<TidalAPIUserPlaylists>(path, token);
 }
 
 export async function removeAllPlaylists(req: Request, res: Response) {
@@ -519,10 +432,10 @@ export async function removeAllPlaylists(req: Request, res: Response) {
   console.log(`Deleting ${playlists.length} playlists...`);
   for (const [index, playlist] of playlists.entries()) {
     console.log(`Playlist ${index + 1}...`);
-    const deleteResponse = await fetch(`${API_URL}/playlists/${playlist.id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const deleteResponse = await connector.delete(
+      `/playlists/${playlist.id}`,
+      token
+    );
 
     if (!deleteResponse.ok) {
       console.log(deleteResponse);
@@ -533,8 +446,6 @@ export async function removeAllPlaylists(req: Request, res: Response) {
         )
       );
     }
-
-    await sleep(500); // Avoid 429
   }
 
   res.status(200).send("OK");

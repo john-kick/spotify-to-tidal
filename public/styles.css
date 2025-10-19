@@ -59,7 +59,7 @@ h1 {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
-#migrate-form {
+#options-container {
   display: flex;
   flex-direction: row;
   gap: 1.5rem;
@@ -103,4 +103,16 @@ h1 {
   height: 50px;
   top: 1rem;
   right: 1rem;
+}
+
+.info-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: var(--color-text-secondary);
+  mask: url("./images/circle-information.svg") no-repeat center;
+  -webkit-mask: url("./images/circle-information.svg") no-repeat center;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  margin-left: 0.5rem;
 }

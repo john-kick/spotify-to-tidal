@@ -65,16 +65,24 @@ function initFormEvents() {
 
 function handleMigrate(event) {
   event.preventDefault();
-  const formData = new FormData(event.target);
-  const selectedOptions = Array.from(formData.entries()).map(
-    (entry) => entry[0]
+  // FormData only includes "successful" controls (e.g. checked checkboxes).
+  // To capture all migration options (checked or not), read the checkbox
+  // inputs explicitly and send their boolean checked state.
+  const form = event.target;
+  const checkboxes = Array.from(
+    form.querySelectorAll('input[type="checkbox"][name]')
   );
-  fetch("/migrate/", {
+  const options = {};
+  checkboxes.forEach((cb) => {
+    options[cb.name] = !!cb.checked;
+  });
+
+  fetch("/migrate", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify({ options: selectedOptions })
+    body: JSON.stringify({ options }),
   })
     .then((response) => response.json())
     .then((data) => {
@@ -89,7 +97,7 @@ function handleMigrate(event) {
 function handleDeleteTracks(event) {
   event.preventDefault();
   fetch("/tidal/tracks", {
-    method: "DELETE"
+    method: "DELETE",
   }).catch((error) => {
     console.error("Error deleting liked tracks:", error);
   });
@@ -98,7 +106,7 @@ function handleDeleteTracks(event) {
 function handleDeletePlaylists(event) {
   event.preventDefault();
   fetch("/tidal/playlists", {
-    method: "DELETE"
+    method: "DELETE",
   })
     .then((response) => response.json())
     .then((data) => {

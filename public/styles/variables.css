@@ -23,6 +23,7 @@
 
   /* === Tooltips === */
   --color-tooltip-bg: #201833;
+  /* --color-tooltip-bg: red; */
   --color-tooltip-text: #f3eefe;
   --color-tooltip-border: #3a2b5e;
   --color-tooltip-shadow: rgba(122, 47, 242, 0.25);

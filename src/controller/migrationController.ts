@@ -2,32 +2,32 @@ import {
   TOKEN_COOKIE_KEY as SPOTIFY_TOKEN_COOKIE_KEY,
   getLikedSongs,
   getSavedAlbums,
-  getUserPlaylists
+  getUserPlaylists,
 } from "@/controller/spotifyController";
 import {
   TOKEN_COOKIE_KEY as TIDAL_TOKEN_COOKIE_KEY,
   addTracksToLikedSongs,
   createPlaylistsFromSpotifyPlaylists,
-  getTracksFromSpotifyTracks
+  getTracksFromSpotifyTracks,
 } from "@/controller/tidalController";
 import type { SpotifyAPIAlbumItem, SpotifyTrack } from "@/types/spotify";
 import type { TidalAPIError, TidalTrack } from "@/types/tidal";
 import { type Request, type Response } from "express";
 
-type MigrationOption = "tracks" | "albums" | "artists" | "playlists";
+type MigrationOption = Record<string, boolean>;
 
 export default async function migrate(
   req: Request,
   res: Response
 ): Promise<void> {
   try {
-    const { options }: { options: MigrationOption[] } = req.body;
+    const { options }: { options: MigrationOption } = req.body;
 
-    if (options.includes("albums")) {
+    if (options.albums) {
       res.status(400).send("Transferring liked albums is not supported yet.");
       return;
     }
-    if (options.includes("artists")) {
+    if (options.artists) {
       res.status(400).send("Transferring liked artists is not supported yet.");
       return;
     }
@@ -35,10 +35,11 @@ export default async function migrate(
     const spotifyToken = req.cookies[SPOTIFY_TOKEN_COOKIE_KEY];
     const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
 
-    if (options.includes("tracks")) {
+    if (options.tracks) {
       const errResult: TidalAPIError | undefined = await migrateLikedSongs(
         spotifyToken,
-        tidalToken
+        tidalToken,
+        options.chunking
       );
       if (errResult) {
         errResult.errors.forEach((error) =>
@@ -48,10 +49,14 @@ export default async function migrate(
         );
       }
     }
-    if (options.includes("playlists")) {
-      await migratePlaylists(spotifyToken, tidalToken);
+    if (options.playlists) {
+      await migratePlaylists(
+        spotifyToken,
+        tidalToken,
+        options["followed-playlists"]
+      );
     }
-    res.status(200).send("OK");
+    res.status(200).json({ message: "Success" });
   } catch (err) {
     console.error(err);
     res.status(500).json(err);
@@ -60,7 +65,8 @@ export default async function migrate(
 
 async function migrateLikedSongs(
   spotifyToken: string,
-  tidalToken: string
+  tidalToken: string,
+  chunked: boolean
 ): Promise<TidalAPIError | undefined> {
   const spotifyTracks: SpotifyTrack[] = (
     await getLikedSongs(spotifyToken)
@@ -78,7 +84,7 @@ async function migrateLikedSongs(
 
   const tidalTracks = result as TidalTrack[];
   const { success: addTracksSuccess, errorResult } =
-    await addTracksToLikedSongs(tidalTracks, tidalToken);
+    await addTracksToLikedSongs(tidalTracks, tidalToken, chunked);
   if (!addTracksSuccess) {
     if (!errorResult) {
       console.error("Something went wrong!");
@@ -99,15 +105,12 @@ async function migrateLikedAlbums(
 
 async function migratePlaylists(
   spotifyToken: string,
-  tidalToken: string
+  tidalToken: string,
+  includeFollowedPlaylists: boolean
 ): Promise<void> {
-  const [spotifyPlaylists, spotifyErrors] = await getUserPlaylists(
-    spotifyToken
+  const spotifyPlaylists = await getUserPlaylists(
+    spotifyToken,
+    includeFollowedPlaylists
   );
-  spotifyErrors.forEach((spotifyError) => {
-    console.error(
-      `Error while getting user playlists: (${spotifyError.error.status}) ${spotifyError.error.status}`
-    );
-  });
   await createPlaylistsFromSpotifyPlaylists(spotifyPlaylists, tidalToken);
 }
