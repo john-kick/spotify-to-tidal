@@ -20,7 +20,7 @@ const REDIRECT_URI = process.env.TIDAL_REDIRECT_URI;
 const COUNTRY_CODE = process.env.COUNTRY_CODE || "DE";
 const AUTHORIZATION_ENDPOINT = "https://login.tidal.com/authorize";
 const TOKEN_ENDPOINT = "https://auth.tidal.com/v1/oauth2/token";
-const API_URL = "https://openapi.tidal.com/v2";
+
 const STATE_COOKIE_KEY = "tidal_auth_state";
 export const TOKEN_COOKIE_KEY = "tidal_access_token";
 const CODE_VERIFIER_KEY = "tidal_code_verifier";
