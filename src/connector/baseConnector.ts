@@ -112,7 +112,7 @@ export default abstract class Connector {
 
     const init: RequestInit = {
       method: "GET",
-      headers,
+      headers
     };
 
     if (!path.startsWith("http")) {
@@ -141,13 +141,13 @@ export default abstract class Connector {
 
     const headers = {
       Authorization: `Bearer ${token}`,
-      "Content-Type": contentType ?? "application/json",
+      "Content-Type": contentType ?? "application/json"
     };
 
     const init: RequestInit = {
       method: "POST",
       headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     };
     const request = new Request(this.baseUrl + path, init);
     return await this.sendRequest(request);
@@ -172,13 +172,13 @@ export default abstract class Connector {
 
     const headers = {
       Authorization: `Bearer ${token}`,
-      "Content-Type": contentType ?? "application/json",
+      "Content-Type": contentType ?? "application/json"
     };
 
     const init: RequestInit = {
       method: "PUT",
       headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     };
     const request = new Request(this.baseUrl + path, init);
     return await this.sendRequest(request);
@@ -203,13 +203,13 @@ export default abstract class Connector {
 
     const headers = {
       Authorization: `Bearer ${token}`,
-      "Content-Type": contentType ?? "application/json",
+      "Content-Type": contentType ?? "application/json"
     };
 
     const init: RequestInit = {
       method: "DELETE",
       headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     };
     const request = new Request(this.baseUrl + path, init);
     return await this.sendRequest(request);

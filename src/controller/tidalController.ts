@@ -7,7 +7,7 @@ import type {
   TidalAPITracks,
   TidalAPIUserPlaylists,
   TidalAPIUserPlaylistsData,
-  TidalTrack,
+  TidalTrack
 } from "@/types/tidal";
 import { generateRandomString, generateS256challenge } from "@/util";
 import type { Request, Response } from "express";
@@ -18,12 +18,8 @@ const REDIRECT_URI = process.env.TIDAL_REDIRECT_URI;
 const COUNTRY_CODE = process.env.COUNTRY_CODE || "DE";
 const AUTHORIZATION_ENDPOINT = "https://login.tidal.com/authorize";
 const TOKEN_ENDPOINT = "https://auth.tidal.com/v1/oauth2/token";
-<<<<<<< Updated upstream
-const API_URL = "https://openapi.tidal.com/v2";
-=======
 const CHUNK_SIZE = 20;
 
->>>>>>> Stashed changes
 const STATE_COOKIE_KEY = "tidal_auth_state";
 export const TOKEN_COOKIE_KEY = "tidal_access_token";
 const CODE_VERIFIER_KEY = "tidal_code_verifier";
@@ -60,7 +56,7 @@ export async function authorize(req: Request, res: Response) {
     scope,
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
-    state,
+    state
   };
 
   const encodedQuery = new URLSearchParams(queryParams).toString();
@@ -101,14 +97,14 @@ export async function callback(req: Request, res: Response) {
     client_secret: CLIENT_SECRET,
     code: code as string,
     redirect_uri: REDIRECT_URI,
-    code_verifier: codeVerifier,
+    code_verifier: codeVerifier
   });
 
   try {
     const response = await fetch(TOKEN_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: body.toString(),
+      body: body.toString()
     });
 
     if (!response.ok) {
@@ -123,7 +119,7 @@ export async function callback(req: Request, res: Response) {
     res.cookie(TOKEN_COOKIE_KEY, access_token, {
       httpOnly: true,
       secure: true,
-      maxAge: expires_in * 1000,
+      maxAge: expires_in * 1000
     });
 
     res.redirect("/auth");
@@ -151,7 +147,7 @@ export async function deleteAllLikedTracks(req: Request, res: Response) {
       const body = {
         data: chunk.map((track) => {
           return { id: track.id, type: "tracks" };
-        }),
+        })
       };
       const deleteResponse = await connector.delete(
         `/userCollections/${userID}/relationships/tracks`,
@@ -213,7 +209,7 @@ export async function getTracksFromSpotifyTracks(
 
     const isrcs = chunk.map((track) => track.isrc.toUpperCase());
     const response = await connector.get("/tracks", token, {
-      "filter[isrc]": isrcs,
+      "filter[isrc]": isrcs
     });
 
     if (!response.ok) {
@@ -243,7 +239,7 @@ export async function getTracksFromSpotifyTracks(
           name: matchedTrack.title,
           id: track.id,
           isrc: track.attributes.isrc,
-          addedAt: matchedTrack.addedAt,
+          addedAt: matchedTrack.addedAt
         };
       })
       .filter((track) => {
@@ -266,7 +262,7 @@ export async function getTracksFromSpotifyTracks(
     success: true,
     result: allTidalTracks.sort(
       (trackA, trackB) => trackA.addedAt - trackB.addedAt
-    ),
+    )
   };
 }
 
@@ -291,7 +287,7 @@ export async function addTracksToLikedSongs(
     const chunk = tracks.slice(i, i + chunkSize).reverse();
 
     const body = {
-      data: chunk.map((track) => ({ id: track.id, type: "tracks" })),
+      data: chunk.map((track) => ({ id: track.id, type: "tracks" }))
     };
 
     const response = await connector.post(
@@ -340,7 +336,7 @@ export async function createPlaylistsFromSpotifyPlaylists(
     console.log(`Searching IDs of ${tTracks.length} tracks...`);
     const playlistData = tTracks.map((track) => ({
       id: track.id,
-      type: "tracks",
+      type: "tracks"
     }));
 
     console.log(
@@ -384,10 +380,10 @@ export async function createPlaylist(
       attributes: {
         accessType: playlist.public ? "PUBLIC" : "UNLISTED",
         description: playlist.description,
-        name: playlist.name,
+        name: playlist.name
       },
-      type: "playlists",
-    },
+      type: "playlists"
+    }
   };
 
   const response = await connector.post(
