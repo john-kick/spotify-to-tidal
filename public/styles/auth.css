@@ -14,26 +14,12 @@
   text-align: center;
 }
 
-#logos {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 2rem;
-  margin-bottom: 2rem;
-  gap: 5rem;
-}
-
-#logos img {
-  height: 100px;
-}
-
 /* Auth buttons container */
 #auth-container {
   display: flex;
   justify-content: center;
   gap: 2rem;
   margin-bottom: 2rem;
-  /* min-width: 800px; */
 }
 
 #auth-container .to-arrow {
@@ -67,4 +53,19 @@
 
 .action-container img {
   max-height: 100px;
+}
+
+@media (max-width: 480px) {
+  #auth-container {
+    flex-direction: column;
+    width: 80%;
+  }
+
+  .to-arrow {
+    display: none;
+  }
+
+  .auth .image-container {
+    width: 50%;
+  }
 }
