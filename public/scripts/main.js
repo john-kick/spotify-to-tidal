@@ -139,6 +139,7 @@ function trackProgress(uuid) {
   document.body.appendChild(progressElement);
 
   progressTitleElement.innerText = "Processing";
+  progressBarElement.hidden = true;
 
   eventSource.onmessage = (event) => {
     const { text, progressBar, status } = JSON.parse(event.data);
@@ -148,9 +149,9 @@ function trackProgress(uuid) {
 
       progressTextElement.innerText = "DONE";
 
-      // setTimeout(() => {
-      //   progressElement.remove();
-      // }, 2000);
+      setTimeout(() => {
+        progressElement.remove();
+      }, 2000);
       return;
     }
 
