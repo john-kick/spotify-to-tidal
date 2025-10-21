@@ -12,6 +12,7 @@ import {
 } from "@/controller/tidalController";
 import type { SpotifyAPIAlbumItem, SpotifyTrack } from "@/types/spotify";
 import type { TidalAPIError, TidalTrack } from "@/types/tidal";
+import type Progress from "@/util/progress";
 import ProgressHandler from "@/util/progressHandler";
 import { type Request, type Response } from "express";
 
@@ -20,12 +21,7 @@ type MigrationOption = Record<string, boolean>;
 const progressHandler = new ProgressHandler();
 
 export async function test(req: Request, res: Response): Promise<void> {
-  const uuid = progressHandler.addProgressBar([
-    "Step 1: Initializing migration",
-    "Step 2: Migrating data",
-    "Step 3: Finalizing migration"
-  ]);
-
+  const uuid = progressHandler.addProgress();
   res.status(200).json({ uuid });
 }
 
@@ -34,6 +30,14 @@ export async function migrate(req: Request, res: Response): Promise<void> {
 
   const spotifyToken = req.cookies[SPOTIFY_TOKEN_COOKIE_KEY];
   const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
+
+  const uuid = progressHandler.addProgress();
+  const progress = progressHandler.getProgress(uuid);
+
+  if (!progress) {
+    res.status(500).json({ message: "Could not create progress object" });
+    return;
+  }
 
   try {
     if (options.albums) {
@@ -45,28 +49,22 @@ export async function migrate(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const uuid = progressHandler.addProgressBar(
-      Object.keys(options).filter((key) => options[key])
-    );
-    const pg = progressHandler.getProgressBar(uuid);
-
-    if (!pg) {
-      res.status(500).json({ message: "Could not create progress bar" });
-      return;
-    }
+    progress.text = "Starting migration";
 
     // Early response: Send the client a unique identifier for the migration process
     res.status(202).json({ message: "Migration started", uuid });
   } catch (err) {
     console.error(err);
     res.status(500).json(err);
+    return;
   }
 
   if (options.tracks) {
     const errResult: TidalAPIError | undefined = await migrateLikedSongs(
       spotifyToken,
       tidalToken,
-      options.chunking
+      options.chunking,
+      progress
     );
     if (errResult) {
       errResult.errors.forEach((error) =>
@@ -80,9 +78,12 @@ export async function migrate(req: Request, res: Response): Promise<void> {
     await migratePlaylists(
       spotifyToken,
       tidalToken,
-      options["followed-playlists"]
+      options["followed-playlists"],
+      progress
     );
   }
+
+  progress.finish();
 }
 
 export async function progress(req: Request, res: Response): Promise<void> {
@@ -101,23 +102,23 @@ export async function progress(req: Request, res: Response): Promise<void> {
 
   uuid = uuid.toString();
 
-  const progressBar = progressHandler.getProgressBar(uuid);
+  const progress = progressHandler.getProgress(uuid);
 
-  if (!progressBar) {
+  if (!progress) {
     res.status(404).json({ message: "Progress bar not found" });
     return;
   }
 
   const sendProgress = () => {
-    if (progressBar.isComplete()) {
+    if (progress.finished) {
       res.write(`Complete\n\n`);
       clearInterval(intervalId);
-      progressHandler.removeProgressBar(uuid);
+      progressHandler.removeProgress(uuid);
       res.end();
       return;
     }
 
-    const current = progressBar.getCurrent();
+    const current = progress.getCurrent();
     res.write(`data: ${JSON.stringify(current)}\n\n`);
   };
 
@@ -127,15 +128,17 @@ export async function progress(req: Request, res: Response): Promise<void> {
 async function migrateLikedSongs(
   spotifyToken: string,
   tidalToken: string,
-  chunked: boolean
+  chunked: boolean,
+  progress: Progress
 ): Promise<TidalAPIError | undefined> {
   const spotifyTracks: SpotifyTrack[] = (
-    await getLikedSongs(spotifyToken)
+    await getLikedSongs(spotifyToken, progress)
   ).reverse();
 
   const { success, result } = await getTracksFromSpotifyTracks(
     spotifyTracks,
-    tidalToken
+    tidalToken,
+    progress
   );
 
   if (!success) {
@@ -145,7 +148,7 @@ async function migrateLikedSongs(
 
   const tidalTracks = result as TidalTrack[];
   const { success: addTracksSuccess, errorResult } =
-    await addTracksToLikedSongs(tidalTracks, tidalToken, chunked);
+    await addTracksToLikedSongs(tidalTracks, tidalToken, chunked, progress);
   if (!addTracksSuccess) {
     if (!errorResult) {
       console.error("Something went wrong!");
@@ -167,11 +170,17 @@ async function migrateLikedAlbums(
 async function migratePlaylists(
   spotifyToken: string,
   tidalToken: string,
-  includeFollowedPlaylists: boolean
+  includeFollowedPlaylists: boolean,
+  progress: Progress
 ): Promise<void> {
   const spotifyPlaylists = await getUserPlaylists(
     spotifyToken,
-    includeFollowedPlaylists
+    includeFollowedPlaylists,
+    progress
   );
-  await createPlaylistsFromSpotifyPlaylists(spotifyPlaylists, tidalToken);
+  await createPlaylistsFromSpotifyPlaylists(
+    spotifyPlaylists,
+    tidalToken,
+    progress
+  );
 }

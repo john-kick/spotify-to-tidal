@@ -1,28 +1,28 @@
-import ProgressBar from "./progressBar";
+import Progress from "./progress";
 
 export default class ProgressHandler {
   /**
    * Map of progress bars identified by a UUID string.
    */
-  private progressBars: Map<string, ProgressBar> = new Map();
+  private progressMap: Map<string, Progress> = new Map();
 
-  public addProgressBar(steps: string[]): string {
+  public addProgress(): string {
     const uuid = crypto.randomUUID();
 
-    this.progressBars.set(uuid, new ProgressBar(steps));
+    this.progressMap.set(uuid, new Progress());
 
     return uuid;
   }
 
-  public getProgressBar(uuid: string): ProgressBar | undefined {
-    return this.progressBars.get(uuid);
+  public getProgress(uuid: string): Progress | undefined {
+    return this.progressMap.get(uuid);
   }
 
-  public removeProgressBar(uuid: string): void {
-    this.progressBars.delete(uuid);
+  public removeProgress(uuid: string): void {
+    this.progressMap.delete(uuid);
   }
 
-  public hasProgressBar(uuid: string): boolean {
-    return this.progressBars.has(uuid);
+  public hasProgress(uuid: string): boolean {
+    return this.progressMap.has(uuid);
   }
 }

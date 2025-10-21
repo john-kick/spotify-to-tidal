@@ -1,5 +1,6 @@
 import type { SpotifyAPIError, SpotifyAPIGetResponse } from "@/types/spotify";
 import Connector from "./baseConnector";
+import type Progress from "@/util/progress";
 
 export default class SpotifyConnector extends Connector {
   protected baseUrl: string = "https://api.spotify.com/v1";
@@ -9,15 +10,18 @@ export default class SpotifyConnector extends Connector {
    */
   public async getPaginated<T extends SpotifyAPIGetResponse>(
     path: string,
-    token: string
+    token: string,
+    progress?: Progress,
+    progressText?: string
   ): Promise<T["items"]> {
-    const limit = 20;
-    let offset = 0;
+    if (progress) {
+      progress.text = progressText + `(0)`;
+    }
+
     let completeResult: T["items"] = [];
     let next: string | undefined = path;
 
     while (next) {
-      // const response = await this.get(path, token, { limit, offset });
       const response = await this.get(next, token);
 
       if (!response.ok) {
@@ -32,7 +36,14 @@ export default class SpotifyConnector extends Connector {
       completeResult = completeResult.concat(result.items);
 
       next = result.next;
-      // offset += limit;
+
+      if (progress) {
+        progress.text = progressText + `(${completeResult.length})`;
+      }
+    }
+
+    if (progress) {
+      progress.text = progressText + `(DONE)`;
     }
 
     return completeResult;

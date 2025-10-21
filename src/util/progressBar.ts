@@ -1,35 +1,31 @@
-type Step = {
-  index: number;
-  description: string;
+export type ProgressBarState = {
+  current: number;
+  total: number;
 };
 
 export default class ProgressBar {
   private current: number;
-  private steps: string[];
+  private total: number;
 
-  public constructor(steps: string[]) {
+  public constructor(steps: number) {
     this.current = 0;
-    this.steps = steps;
+    this.total = steps;
   }
 
-  public next(): string | null {
-    if (this.current < this.steps.length) {
-      const step = this.steps[this.current];
-      this.current += 1;
-      return step;
+  public next(steps: number = 1): number | null {
+    if (this.current < this.total) {
+      this.current += steps;
+      return this.current;
     }
     return null;
   }
 
-  public getCurrent(): Step {
-    return {
-      index: this.current,
-      description: this.steps[this.current] || "Completed"
-    };
+  public getCurrent(): ProgressBarState {
+    return { current: this.current, total: this.total };
   }
 
   public isComplete(): boolean {
-    return this.current >= this.steps.length;
+    return this.current >= this.total;
   }
 
   public reset(): void {

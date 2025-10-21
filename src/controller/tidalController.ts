@@ -10,6 +10,8 @@ import type {
   TidalTrack
 } from "@/types/tidal";
 import { generateRandomString, generateS256challenge } from "@/util";
+import type Progress from "@/util/progress";
+import ProgressBar from "@/util/progressBar";
 import type { Request, Response } from "express";
 
 const CLIENT_ID = process.env.TIDAL_CLIENT_ID;
@@ -197,15 +199,22 @@ async function getUserID(token: string): Promise<string | null> {
 
 export async function getTracksFromSpotifyTracks(
   spotifyTracks: SpotifyTrack[],
-  token: string
+  token: string,
+  progress?: Progress
 ): Promise<{ success: boolean; result: TidalAPIError | TidalTrack[] }> {
   let allTidalTracks: TidalTrack[] = [];
   console.log(`Get ${spotifyTracks.length} tracks from Tidal...`);
+  if (progress) {
+    progress.text = "Fetching tracks from Tidal";
+    const progressBar = new ProgressBar(spotifyTracks.length);
+    progress.progressBar = progressBar;
+  }
 
   let chunkCounter = 0;
-  for (let i = 0; i < spotifyTracks.length; i += 20) {
+  const chunkSize = 20;
+  for (let i = 0; i < spotifyTracks.length; i += chunkSize) {
     console.log(`Chunk ${++chunkCounter}...`);
-    const chunk = spotifyTracks.slice(i, i + 20);
+    const chunk = spotifyTracks.slice(i, i + chunkSize);
 
     const isrcs = chunk.map((track) => track.isrc.toUpperCase());
     const response = await connector.get("/tracks", token, {
@@ -247,6 +256,10 @@ export async function getTracksFromSpotifyTracks(
       });
 
     allTidalTracks = allTidalTracks.concat(tracks);
+
+    if (progress) {
+      progress.progressBar!.next(chunkSize);
+    }
   }
 
   // Check if all tracks were found
@@ -257,6 +270,13 @@ export async function getTracksFromSpotifyTracks(
       console.warn(`Track with ISRC ${spotifyTrack.isrc} was not found!`);
     }
   });
+
+  if (progress) {
+    progress.text = "Fetching tracks from Tidal (DONE)";
+
+    // Remove the progress bar
+    progress.progressBar = undefined;
+  }
 
   return {
     success: true,
@@ -269,8 +289,14 @@ export async function getTracksFromSpotifyTracks(
 export async function addTracksToLikedSongs(
   tracks: TidalTrack[],
   token: string,
-  chunked: boolean = false
+  chunked: boolean = false,
+  progress?: Progress
 ): Promise<{ success: boolean; errorResult?: TidalAPIError }> {
+  if (progress) {
+    progress.text = "Adding liked tracks to Tidal";
+    progress.progressBar = new ProgressBar(tracks.length);
+  }
+
   console.log(`Adding ${tracks.length} tracks to liked songs...`);
   const userID = await getUserID(token);
 
@@ -302,15 +328,34 @@ export async function addTracksToLikedSongs(
       const errResult: TidalAPIError = await response.json();
       return { success: false, errorResult: errResult };
     }
+
+    if (progress) {
+      progress.progressBar!.next(chunkSize);
+    }
   }
+
+  if (progress) {
+    progress.text = "Adding liked tracks to Tidal (DONE)";
+    progress.progressBar = undefined;
+  }
+
   return { success: true };
 }
 
 export async function createPlaylistsFromSpotifyPlaylists(
   spotifyPlaylists: SpotifyPlaylist[],
-  token: string
+  token: string,
+  progress?: Progress
 ): Promise<void> {
+  if (progress) {
+    progress.text = "Creating playlists in Tidal";
+    progress.progressBar = new ProgressBar(spotifyPlaylists.length);
+  }
+
   for (const spotifyPlaylist of spotifyPlaylists) {
+    if (progress) {
+      progress.progressBar!.next();
+    }
     const playlistID = await createPlaylist(spotifyPlaylist, token);
     if (!playlistID) {
       console.error(`Playlist ${spotifyPlaylist.name} was not created`);
@@ -367,6 +412,13 @@ export async function createPlaylistsFromSpotifyPlaylists(
         continue;
       }
     }
+  }
+
+  if (progress) {
+    progress.text = "Creating playlists in Tidal";
+
+    // Remove the progress bar
+    progress.progressBar = undefined;
   }
 }
 

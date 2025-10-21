@@ -9,9 +9,11 @@ import type {
   SpotifyAPIUserPlaylists,
   SpotifyAPIUserTracks,
   SpotifyPlaylist,
-  SpotifyTrack,
+  SpotifyTrack
 } from "@/types/spotify";
 import { generateRandomString } from "@/util";
+import type Progress from "@/util/progress";
+import ProgressBar from "@/util/progressBar";
 import { response, type Request, type Response } from "express";
 
 const AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";
@@ -50,7 +52,7 @@ export function authorize(_req: Request, res: Response): void {
     scope:
       "user-read-private user-read-email user-library-read playlist-read-private",
     redirect_uri: REDIRECT_URI,
-    state,
+    state
   }).toString();
 
   res.redirect(`${AUTHORIZE_ENDPOINT}?${queryParams}`);
@@ -82,7 +84,7 @@ export async function callback(req: Request, res: Response) {
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code: code as string,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: REDIRECT_URI
   });
 
   const encodedClientCreds = Buffer.from(
@@ -91,14 +93,14 @@ export async function callback(req: Request, res: Response) {
 
   const headers = {
     Authorization: `Basic ${encodedClientCreds}`,
-    "Content-Type": "application/x-www-form-urlencoded",
+    "Content-Type": "application/x-www-form-urlencoded"
   };
 
   try {
     const response = await fetch(TOKEN_ENDPOINT, {
       method: "POST",
       headers,
-      body: body.toString(),
+      body: body.toString()
     });
 
     if (!response.ok) {
@@ -113,7 +115,7 @@ export async function callback(req: Request, res: Response) {
     res.cookie(TOKEN_COOKIE_KEY, access_token, {
       httpOnly: true,
       secure: true,
-      maxAge: expires_in * 1000,
+      maxAge: expires_in * 1000
     });
 
     res.redirect("/auth");
@@ -136,17 +138,22 @@ async function getUserID(token: string): Promise<string> {
   return result.id;
 }
 
-export async function getLikedSongs(token: string): Promise<SpotifyTrack[]> {
+export async function getLikedSongs(
+  token: string,
+  progress?: Progress
+): Promise<SpotifyTrack[]> {
   const userTracks = await connector.getPaginated<SpotifyAPIUserTracks>(
     "/me/tracks",
-    token
+    token,
+    progress,
+    "Fetching tracks from Spotify"
   );
 
   return userTracks.map((item) => ({
     id: item.track.id,
     title: item.track.name,
     isrc: item.track.external_ids.isrc,
-    addedAt: new Date(item.added_at).getTime(),
+    addedAt: new Date(item.added_at).getTime()
   }));
 }
 
@@ -158,14 +165,20 @@ export async function getSavedAlbums(
 
 export async function getUserPlaylists(
   token: string,
-  includeFollowedPlaylists: boolean
+  includeFollowedPlaylists: boolean,
+  progress?: Progress
 ): Promise<SpotifyPlaylist[]> {
   let responsePlaylists = await connector.getPaginated<SpotifyAPIUserPlaylists>(
     "/me/playlists",
-    token
+    token,
+    progress,
+    "Fetching user playlists from Spotify"
   );
 
   if (!includeFollowedPlaylists) {
+    if (progress) {
+      progress.text = "Filtering out playlists not created by the user";
+    }
     const userID = await getUserID(token);
     responsePlaylists = responsePlaylists.filter(
       (playlist) => playlist.owner.id === userID
@@ -175,7 +188,15 @@ export async function getUserPlaylists(
   // Convert the tracks object
   let playlists: SpotifyPlaylist[] = [];
 
+  if (progress) {
+    progress.text = "Parsing playlists";
+    progress.progressBar = new ProgressBar(playlists.length);
+  }
+
   for (const playlist of responsePlaylists) {
+    if (progress) {
+      progress.progressBar!.next();
+    }
     let tracks: SpotifyAPIPlaylistItem[] =
       await connector.getPaginated<SpotifyAPIPlaylistItems>(
         playlist.tracks.href,
@@ -193,9 +214,16 @@ export async function getUserPlaylists(
         id: item.track.id,
         title: item.track.name,
         isrc: item.track.external_ids.isrc,
-        addedAt: new Date(item.added_at).getTime(),
-      })),
+        addedAt: new Date(item.added_at).getTime()
+      }))
     });
+  }
+
+  if (progress) {
+    progress.text = "Parsing playlists (DONE)";
+
+    // Remove the progress bar
+    progress.progressBar = undefined;
   }
 
   return playlists.map((playlist) => ({
@@ -203,6 +231,6 @@ export async function getUserPlaylists(
     description: playlist.description,
     images: playlist.images,
     public: playlist.public,
-    tracks: playlist.tracks,
+    tracks: playlist.tracks
   }));
 }
