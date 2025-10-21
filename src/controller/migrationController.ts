@@ -48,6 +48,12 @@ export async function migrate(req: Request, res: Response): Promise<void> {
     const uuid = progressHandler.addProgressBar(
       Object.keys(options).filter((key) => options[key])
     );
+    const pg = progressHandler.getProgressBar(uuid);
+
+    if (!pg) {
+      res.status(500).json({ message: "Could not create progress bar" });
+      return;
+    }
 
     // Early response: Send the client a unique identifier for the migration process
     res.status(202).json({ message: "Migration started", uuid });
