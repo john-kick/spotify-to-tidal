@@ -10,8 +10,9 @@ import type {
   TidalTrack
 } from "@/types/tidal";
 import { generateRandomString, generateS256challenge } from "@/util";
-import type Progress from "@/util/progress";
+import Progress from "@/util/progress";
 import ProgressBar from "@/util/progressBar";
+import ProgressHandler from "@/util/progressHandler";
 import type { Request, Response } from "express";
 
 const CLIENT_ID = process.env.TIDAL_CLIENT_ID;
@@ -131,56 +132,67 @@ export async function callback(req: Request, res: Response) {
 }
 
 export async function deleteAllLikedTracks(req: Request, res: Response) {
-  try {
-    const token = req.cookies[TOKEN_COOKIE_KEY];
-    const userID = await getUserID(token);
+  const token = req.cookies[TOKEN_COOKIE_KEY];
+  if (!token) {
+    res.redirect("/auth");
+    return;
+  }
 
-    const tracks = await connector.getPaginated<TidalAPITracks>(
+  const userID = await getUserID(token);
+
+  const progressHandler = ProgressHandler.getInstance();
+  const { progress, uuid } = progressHandler.createProgress();
+
+  // Early response: Pass uuid of the progress object to the client
+  res.status(202).json({ uuid });
+
+  const tracks = await connector.getPaginated<TidalAPITracks>(
+    `/userCollections/${userID}/relationships/tracks`,
+    token,
+    progress,
+    "Fetching liked tracks from Tidal"
+  );
+
+  // Delete tracks in chunks of 20
+  console.log(`Deleting ${tracks.length} tracks...`);
+  progress.progressBar = new ProgressBar(tracks.length);
+  progress.text = "Deleting liked tracks from Tidal";
+
+  const chunkSize = 20;
+  for (let i = 0; i < tracks.length; i += chunkSize) {
+    progress.progressBar.next(chunkSize);
+    console.log(`Deleting tracks ${i}-${i + chunkSize}...`);
+    const chunk = tracks.slice(i, i + chunkSize);
+    const body = {
+      data: chunk.map((track) => {
+        return { id: track.id, type: "tracks" };
+      })
+    };
+    const deleteResponse = await connector.delete(
       `/userCollections/${userID}/relationships/tracks`,
-      token
+      token,
+      {},
+      body,
+      "application/vnd.api+json"
     );
 
-    // Delete tracks in chunks of 20
-    console.log(`Deleting ${tracks.length} tracks...`);
-
-    for (let i = 0; i < tracks.length; i += 20) {
-      console.log(`Deleting tracks ${i}-${i + 20}...`);
-      const chunk = tracks.slice(i, i + 20);
-      const body = {
-        data: chunk.map((track) => {
-          return { id: track.id, type: "tracks" };
-        })
-      };
-      const deleteResponse = await connector.delete(
-        `/userCollections/${userID}/relationships/tracks`,
-        token,
-        {},
-        body,
-        "application/vnd.api+json"
+    if (!deleteResponse.ok) {
+      const deleteResult: TidalAPIError = await deleteResponse.json();
+      deleteResult.errors.forEach((error) =>
+        console.error(
+          `Error while deleting liked songs: (${error.code}) ${error.detail}`
+        )
       );
-
-      if (!deleteResponse.ok) {
-        const deleteResult: TidalAPIError = await deleteResponse.json();
-        deleteResult.errors.forEach((error) =>
-          console.error(
-            `Error while deleting liked songs: (${error.code}) ${error.detail}`
-          )
-        );
-        res
-          .status(400)
-          .send(
-            "Error while deleting liked songs. See console for more details"
-          );
-      }
+      res
+        .status(400)
+        .send("Error while deleting liked songs. See console for more details");
     }
-    res.status(200).send("OK");
-  } catch (err) {
-    console.error(err);
-    res.status(500).send(err);
   }
+
+  progress.finish();
 }
 
-async function getUserID(token: string): Promise<string | null> {
+async function getUserID(token: string): Promise<string> {
   const response = await connector.get("/users/me", token);
 
   if (!response.ok) {
@@ -190,7 +202,9 @@ async function getUserID(token: string): Promise<string | null> {
         `Error while fetching user ID: (${error.code}) ${error.detail}`
       )
     );
-    return null;
+    throw new Error(
+      "Error while fetching user ID. See server console for more details."
+    );
   }
 
   const result: TidalAPIGetCurrentUserResponse = await response.json();
@@ -466,20 +480,40 @@ export async function createPlaylist(
 }
 
 async function getAllPlaylists(
-  token: string
+  token: string,
+  progress?: Progress
 ): Promise<TidalAPIUserPlaylistsData[]> {
   const userID = await getUserID(token);
   const path = `/playlists?countryCode=${COUNTRY_CODE}&filter[owners.id]=${userID}`;
-  return await connector.getPaginated<TidalAPIUserPlaylists>(path, token);
+  return await connector.getPaginated<TidalAPIUserPlaylists>(
+    path,
+    token,
+    progress,
+    "Fetching user playlists from Tidal"
+  );
 }
 
 export async function removeAllPlaylists(req: Request, res: Response) {
   const token = req.cookies[TOKEN_COOKIE_KEY];
-  const playlists = await getAllPlaylists(token);
+
+  if (!token) {
+    res.redirect("/auth");
+    return;
+  }
+
+  const progressHandler = ProgressHandler.getInstance();
+  const { progress, uuid } = progressHandler.createProgress();
+
+  res.status(202).json({ uuid });
+
+  const playlists = await getAllPlaylists(token, progress);
 
   console.log(`Deleting ${playlists.length} playlists...`);
+  progress.text = "Deleting playlists";
+  progress.progressBar = new ProgressBar(playlists.length);
   for (const [index, playlist] of playlists.entries()) {
     console.log(`Playlist ${index + 1}...`);
+    progress.progressBar.next();
     const deleteResponse = await connector.delete(
       `/playlists/${playlist.id}`,
       token
@@ -496,5 +530,7 @@ export async function removeAllPlaylists(req: Request, res: Response) {
     }
   }
 
-  res.status(200).send("OK");
+  progress.text = "Deleting playlists (DONE)";
+  progress.progressBar = undefined;
+  progress.finish();
 }

@@ -1,17 +1,28 @@
 import Progress from "./progress";
 
 export default class ProgressHandler {
+  private static instance?: ProgressHandler;
   /**
    * Map of progress bars identified by a UUID string.
    */
   private progressMap: Map<string, Progress> = new Map();
 
-  public addProgress(): string {
+  public static getInstance(): ProgressHandler {
+    if (!ProgressHandler.instance) {
+      ProgressHandler.instance = new ProgressHandler();
+    }
+    return ProgressHandler.instance;
+  }
+
+  private constructor() {}
+
+  public createProgress(): { progress: Progress; uuid: string } {
     const uuid = crypto.randomUUID();
 
-    this.progressMap.set(uuid, new Progress());
+    const progress = new Progress();
+    this.progressMap.set(uuid, progress);
 
-    return uuid;
+    return { progress, uuid };
   }
 
   public getProgress(uuid: string): Progress | undefined {

@@ -1,5 +1,6 @@
 import type { TidalAPIError, TidalAPIGetResponse } from "@/types/tidal";
 import Connector from "./baseConnector";
+import type Progress from "@/util/progress";
 
 export default class TidalConnector extends Connector {
   protected baseUrl: string = "https://openapi.tidal.com/v2";
@@ -9,8 +10,14 @@ export default class TidalConnector extends Connector {
    */
   public async getPaginated<T extends TidalAPIGetResponse>(
     path: string,
-    token: string
+    token: string,
+    progress?: Progress,
+    progressText?: string
   ): Promise<T["data"]> {
+    if (progress) {
+      progress.text = progressText + " (0)";
+    }
+
     let completeResult: T["data"] = [];
     let next: string | undefined = path;
     while (next) {
@@ -30,7 +37,16 @@ export default class TidalConnector extends Connector {
       // concatenate arrays; cast to any to avoid narrow typing issues
       completeResult = (completeResult as any).concat(result.data);
       next = result.links.next ? result.links.next : undefined;
+
+      if (progress) {
+        progress.text = progressText + ` (${completeResult.length})`;
+      }
     }
+
+    if (progress) {
+      progress.text = progressText + "(DONE)";
+    }
+
     return completeResult;
   }
 }

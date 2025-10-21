@@ -6,6 +6,7 @@ import express from "express";
 import path from "path";
 import { TOKEN_COOKIE_KEY as SPOTIFY_TOKEN_COOKIE_KEY } from "./controller/spotifyController";
 import { TOKEN_COOKIE_KEY as TIDAL_TOKEN_COOKIE_KEY } from "./controller/tidalController";
+import { progress } from "./controller/progressController";
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -30,6 +31,7 @@ app.get("/logout", (req, res) => {
   res.clearCookie(TIDAL_TOKEN_COOKIE_KEY);
   res.redirect("/auth?logout=1");
 });
+app.get("/progress", progress);
 
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);

@@ -97,26 +97,22 @@ function handleDeleteTracks(event) {
   event.preventDefault();
   fetch("/tidal/tracks", {
     method: "DELETE"
-  }).catch((error) => {
-    console.error("Error deleting liked tracks:", error);
-  });
+  })
+    .then((res) => res.json())
+    .then((res) => trackProgress(res.uuid))
+    .catch((error) => console.error("Error deleting liked tracks:", error));
 }
 
 function handleDeletePlaylists(event) {
   event.preventDefault();
   fetch("/tidal/playlists", { method: "DELETE" })
-    .then((response) => response.json())
-    .then((data) => {
-      console.log("Delete playlists result:", data);
-      // Handle the deletion result as needed
-    })
-    .catch((error) => {
-      console.error("Error deleting playlists:", error);
-    });
+    .then((res) => res.json())
+    .then((res) => trackProgress(res.uuid))
+    .catch((error) => console.error("Error deleting playlists:", error));
 }
 
 function trackProgress(uuid) {
-  const eventSource = new EventSource(`/migrate/progress?uuid=${uuid}`);
+  const eventSource = new EventSource(`/progress?uuid=${uuid}`);
 
   const progressElement = document.createElement("div");
   const progressTitleElement = document.createElement("h2");

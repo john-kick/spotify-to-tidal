@@ -14,7 +14,7 @@ export default class ProgressBar {
 
   public next(steps: number = 1): number | null {
     if (this.current < this.total) {
-      this.current += steps;
+      this.current = Math.min(this.current + steps, this.total);
       return this.current;
     }
     return null;

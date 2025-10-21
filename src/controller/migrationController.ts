@@ -18,7 +18,7 @@ import { type Request, type Response } from "express";
 
 type MigrationOption = Record<string, boolean>;
 
-const progressHandler = new ProgressHandler();
+const progressHandler = ProgressHandler.getInstance();
 
 export async function migrate(req: Request, res: Response): Promise<void> {
   const { options }: { options: MigrationOption } = req.body;
@@ -26,8 +26,7 @@ export async function migrate(req: Request, res: Response): Promise<void> {
   const spotifyToken = req.cookies[SPOTIFY_TOKEN_COOKIE_KEY];
   const tidalToken = req.cookies[TIDAL_TOKEN_COOKIE_KEY];
 
-  const uuid = progressHandler.addProgress();
-  const progress = progressHandler.getProgress(uuid);
+  const { progress, uuid } = progressHandler.createProgress();
 
   if (!progress) {
     res.status(500).json({ message: "Could not create progress object" });
@@ -79,44 +78,6 @@ export async function migrate(req: Request, res: Response): Promise<void> {
   }
 
   progress.finish();
-}
-
-export async function progress(req: Request, res: Response): Promise<void> {
-  // Set headers
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no");
-
-  let { uuid } = req.query;
-
-  if (!uuid) {
-    res.status(400).json({ message: "UUID is required" });
-    return;
-  }
-
-  uuid = uuid.toString();
-  const progress = progressHandler.getProgress(uuid);
-
-  if (!progress) {
-    res.status(404).json({ message: "Progress bar not found" });
-    return;
-  }
-
-  const sendProgress = () => {
-    if (progress.finished) {
-      res.write(`data: ${JSON.stringify({ status: "done" })}\n\n`);
-      clearInterval(intervalId);
-      progressHandler.removeProgress(uuid);
-      res.end();
-      return;
-    }
-
-    const current = progress.getCurrent();
-    res.write(`data: ${JSON.stringify(current)}\n\n`);
-  };
-
-  const intervalId = setInterval(sendProgress, 1000);
 }
 
 async function migrateLikedSongs(
