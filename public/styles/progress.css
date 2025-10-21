@@ -1,0 +1,36 @@
+@import url("./variables.css");
+
+.progress {
+  width: 400px;
+  background-color: var(--color-surface);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 10px;
+  box-shadow: 0 0 4px var(--color-shadow);
+}
+
+.progress-title {
+  background-color: var(--color-surface-2);
+  border-radius: 10px 10px 0 0;
+  padding: 1rem 2rem;
+}
+
+.progress-content {
+  padding: 2rem;
+}
+
+.progress-text {
+  height: 25px;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+  height: 34px;
+  background-color: var(--color-primary);
+  transition: width 0.5s ease;
+  box-shadow: 0 0 12px var(--color-shadow);
+  border-radius: 17px;
+}

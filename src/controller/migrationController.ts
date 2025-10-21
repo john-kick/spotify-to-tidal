@@ -20,11 +20,6 @@ type MigrationOption = Record<string, boolean>;
 
 const progressHandler = new ProgressHandler();
 
-export async function test(req: Request, res: Response): Promise<void> {
-  const uuid = progressHandler.addProgress();
-  res.status(200).json({ uuid });
-}
-
 export async function migrate(req: Request, res: Response): Promise<void> {
   const { options }: { options: MigrationOption } = req.body;
 
@@ -101,7 +96,6 @@ export async function progress(req: Request, res: Response): Promise<void> {
   }
 
   uuid = uuid.toString();
-
   const progress = progressHandler.getProgress(uuid);
 
   if (!progress) {
@@ -111,7 +105,7 @@ export async function progress(req: Request, res: Response): Promise<void> {
 
   const sendProgress = () => {
     if (progress.finished) {
-      res.write(`Complete\n\n`);
+      res.write(`data: ${JSON.stringify({ status: "done" })}\n\n`);
       clearInterval(intervalId);
       progressHandler.removeProgress(uuid);
       res.end();

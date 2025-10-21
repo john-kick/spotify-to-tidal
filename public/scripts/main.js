@@ -80,14 +80,13 @@ function handleMigrate(event) {
   fetch("/migrate", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/json"
     },
-    body: JSON.stringify({ options }),
+    body: JSON.stringify({ options })
   })
     .then((response) => response.json())
     .then((data) => {
-      console.log("Migration result:", data);
-      // Handle the migration result as needed
+      trackProgress(data.uuid);
     })
     .catch((error) => {
       console.error("Error during migration:", error);
@@ -97,7 +96,7 @@ function handleMigrate(event) {
 function handleDeleteTracks(event) {
   event.preventDefault();
   fetch("/tidal/tracks", {
-    method: "DELETE",
+    method: "DELETE"
   }).catch((error) => {
     console.error("Error deleting liked tracks:", error);
   });
@@ -105,9 +104,7 @@ function handleDeleteTracks(event) {
 
 function handleDeletePlaylists(event) {
   event.preventDefault();
-  fetch("/tidal/playlists", {
-    method: "DELETE",
-  })
+  fetch("/tidal/playlists", { method: "DELETE" })
     .then((response) => response.json())
     .then((data) => {
       console.log("Delete playlists result:", data);
@@ -116,4 +113,56 @@ function handleDeletePlaylists(event) {
     .catch((error) => {
       console.error("Error deleting playlists:", error);
     });
+}
+
+function trackProgress(uuid) {
+  const eventSource = new EventSource(`/migrate/progress?uuid=${uuid}`);
+
+  const progressElement = document.createElement("div");
+  const progressTitleElement = document.createElement("h2");
+  const progressContentElement = document.createElement("div");
+  const progressTextElement = document.createElement("div");
+  const progressBarElement = document.createElement("div");
+
+  progressElement.classList.add("progress");
+  progressTitleElement.classList.add("progress-title");
+  progressContentElement.classList.add("progress-content");
+  progressTextElement.classList.add("progress-text");
+  progressBarElement.classList.add("progress-bar");
+
+  progressContentElement.appendChild(progressTextElement);
+  progressContentElement.appendChild(progressBarElement);
+
+  progressElement.appendChild(progressTitleElement);
+  progressElement.appendChild(progressContentElement);
+
+  document.body.appendChild(progressElement);
+
+  progressTitleElement.innerText = "Processing";
+
+  eventSource.onmessage = (event) => {
+    const { text, progressBar, status } = JSON.parse(event.data);
+
+    if (status && status === "done") {
+      eventSource.close();
+
+      progressTextElement.innerText = "DONE";
+
+      // setTimeout(() => {
+      //   progressElement.remove();
+      // }, 2000);
+      return;
+    }
+
+    console.log(event.data);
+
+    progressTextElement.innerText = text;
+    if (progressBar) {
+      progressBarElement.hidden = false;
+      progressBarElement.style.width =
+        (progressBar.current / progressBar.total) * 100 + "%";
+    } else {
+      progressBarElement.hidden = true;
+    }
+  };
 }
