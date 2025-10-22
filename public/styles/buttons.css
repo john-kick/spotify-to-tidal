@@ -39,3 +39,17 @@ button.danger:disabled {
   background-color: var(--color-border);
   color: var(--color-text-muted);
 }
+
+/* Responsive button adjustments */
+@media (max-width: 480px) {
+  button {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  /* ensure buttons keep some spacing when stacked */
+  button + button {
+    margin-top: 0.5rem;
+  }
+}

@@ -34,3 +34,9 @@
   box-shadow: 0 0 12px var(--color-shadow);
   border-radius: 17px;
 }
+
+@media (max-width: 480px) {
+  .progress {
+    position: fixed;
+  }
+}
