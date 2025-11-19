@@ -21,11 +21,37 @@ export type TidalTrack = {
   id: string;
   isrc: string;
   addedAt: number; // Timestamp
+  artists: TidalArtist[];
+};
+
+export type TidalArtist = {
+  name: string;
 };
 
 export type TidalAPITrackData = {
   id: string;
   attributes: { isrc: string };
+  relationships: {
+    artists: TidalAPIArtistRel;
+  };
+};
+
+export type TidalAPIArtistRel = {
+  data?: {
+    id: string;
+    type: "artists";
+  }[];
+  links: {
+    self: string;
+  };
+};
+
+export type TidalAPIArtist = {
+  data: {
+    attributes: {
+      name: string;
+    };
+  };
 };
 
 export interface TidalAPIGetUserTrackRelResponse extends TidalAPIGetResponse {

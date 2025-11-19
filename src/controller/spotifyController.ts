@@ -14,7 +14,7 @@ import type {
 import { generateRandomString } from "@/util";
 import type Progress from "@/util/progress";
 import ProgressBar from "@/util/progressBar";
-import { response, type Request, type Response } from "express";
+import { type Request, type Response } from "express";
 
 const AUTHORIZE_ENDPOINT = "https://accounts.spotify.com/authorize";
 const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
@@ -149,12 +149,17 @@ export async function getLikedSongs(
     "Fetching tracks from Spotify"
   );
 
-  return userTracks.map((item) => ({
+  console.log(`Found ${userTracks.length} songs from Spotify`);
+
+  const mappedUserTracks = userTracks.map((item) => ({
     id: item.track.id,
     title: item.track.name,
     isrc: item.track.external_ids.isrc,
-    addedAt: new Date(item.added_at).getTime()
+    addedAt: new Date(item.added_at).getTime(),
+    artists: item.track.artists
   }));
+
+  return mappedUserTracks;
 }
 
 export async function getSavedAlbums(
@@ -214,7 +219,8 @@ export async function getUserPlaylists(
         id: item.track.id,
         title: item.track.name,
         isrc: item.track.external_ids.isrc,
-        addedAt: new Date(item.added_at).getTime()
+        addedAt: new Date(item.added_at).getTime(),
+        artists: item.track.artists
       }))
     });
   }

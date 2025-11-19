@@ -26,6 +26,9 @@ app.get("/", (req, res) =>
 app.get("/auth", (req, res) =>
   res.sendFile("public/views/auth.html", { root: path.join(__dirname, "..") })
 );
+app.get("/result", (req, res) =>
+  res.sendFile("public/views/result.html", { root: path.join(__dirname, "..") })
+);
 app.get("/logout", (req, res) => {
   res.clearCookie(SPOTIFY_TOKEN_COOKIE_KEY);
   res.clearCookie(TIDAL_TOKEN_COOKIE_KEY);

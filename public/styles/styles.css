@@ -1,10 +1,11 @@
-@import url("styles/auth.css");
-@import url("styles/buttons.css");
-@import url("styles/cards.css");
-@import url("styles/forms.css");
-@import url("styles/progress.css");
-@import url("styles/tooltips.css");
-@import url("styles/variables.css");
+@import url("auth.css");
+@import url("buttons.css");
+@import url("cards.css");
+@import url("forms.css");
+@import url("progress.css");
+@import url("loading.css");
+@import url("tooltips.css");
+@import url("variables.css");
 
 /* Base styles */
 body {

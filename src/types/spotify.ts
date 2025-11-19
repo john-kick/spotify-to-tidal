@@ -13,7 +13,7 @@ export interface SpotifyAPIGetResponse {
 export type SpotifyTrack = {
   id: string;
   title: string;
-  // artist: string;
+  artists: any[];
   isrc: string;
   addedAt: number; // timestamp
 };
@@ -41,6 +41,9 @@ export type SpotifyAPIUserTrack = {
     id: string;
     name: string;
     external_ids: { isrc: string };
+    artists: {
+      name: string;
+    }[];
   };
   added_at: string;
 };
@@ -77,6 +80,9 @@ export type SpotifyAPIPlaylistItem = {
     external_ids: {
       isrc: string;
     };
+    artists: {
+      name: string;
+    }[];
   };
   added_at: string;
 };

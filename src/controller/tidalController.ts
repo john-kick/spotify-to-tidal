@@ -1,12 +1,15 @@
 import TidalConnector from "@/connector/tidalConnector";
 import type { SpotifyPlaylist, SpotifyTrack } from "@/types/spotify";
 import type {
+  TidalAPIArtist,
+  TidalAPIArtistRel,
   TidalAPIError,
   TidalAPIGetCurrentUserResponse,
   TidalAPIPostPlaylistResponse,
   TidalAPITracks,
   TidalAPIUserPlaylists,
   TidalAPIUserPlaylistsData,
+  TidalArtist,
   TidalTrack
 } from "@/types/tidal";
 import { generateRandomString, generateS256challenge } from "@/util";
@@ -28,6 +31,8 @@ export const TOKEN_COOKIE_KEY = "tidal_access_token";
 const CODE_VERIFIER_KEY = "tidal_code_verifier";
 
 const connector: TidalConnector = new TidalConnector();
+
+const artistsCache: Record<string, TidalArtist> = {};
 
 export function status(req: Request, res: Response): void {
   const token = req.cookies[TOKEN_COOKIE_KEY];
@@ -215,8 +220,12 @@ export async function getTracksFromSpotifyTracks(
   spotifyTracks: SpotifyTrack[],
   token: string,
   progress?: Progress
-): Promise<{ success: boolean; result: TidalAPIError | TidalTrack[] }> {
+): Promise<{
+  foundTracks: TidalTrack[];
+  notFoundTracks: SpotifyTrack[];
+}> {
   let allTidalTracks: TidalTrack[] = [];
+  let notFoundTracks: SpotifyTrack[] = [];
   console.log(`Get ${spotifyTracks.length} tracks from Tidal...`);
   if (progress) {
     progress.text = "Fetching tracks from Tidal";
@@ -242,32 +251,51 @@ export async function getTracksFromSpotifyTracks(
           `Error while fetching tracks: (${error.code}) ${error.detail}`
         )
       );
-      return { success: false, result: errResult };
+      const firstErr = errResult.errors[0];
+      throw new Error(
+        `${errResult.errors.length} error(s) occurred. First error: (${firstErr.code}) ${firstErr.detail}`
+      );
     }
 
     const result: TidalAPITracks = await response.json();
 
-    // Assign the tidal tracks the corresponding addedAt value
-    const tracks: TidalTrack[] = result.data
-      .map((track) => {
-        const matchedTrack = spotifyTracks.find(
-          (sTrack) => sTrack.isrc === track.attributes.isrc
-        );
+    // Map the received track data to internal type
+    let tracks: TidalTrack[] = [];
+    for (const apiTrack of result.data) {
+      let artists: (TidalArtist | undefined)[] = [];
 
-        if (!matchedTrack) {
-          return null;
-        }
+      const artistsResponse = await connector.get(
+        apiTrack.relationships.artists.links.self,
+        token
+      );
+      const artistsResult = (await artistsResponse.json()) as TidalAPIArtistRel;
 
-        return {
-          name: matchedTrack.title,
-          id: track.id,
-          isrc: track.attributes.isrc,
-          addedAt: matchedTrack.addedAt
-        };
-      })
-      .filter((track) => {
-        return track !== null;
+      if (!artistsResult.data || artistsResult.data.length === 0) {
+        throw new Error(`No artists for Song found: ${apiTrack.id}`);
+      }
+
+      for (const artist of artistsResult.data) {
+        artists = artists.concat(await getArtistData(artist.id, token));
+      }
+
+      const matchedTrack = spotifyTracks.find(
+        (sTrack) => sTrack.isrc === apiTrack.attributes.isrc
+      );
+
+      if (!matchedTrack) {
+        continue;
+      }
+
+      const filteredArtists = artists.filter((artist) => artist !== undefined);
+
+      tracks = tracks.concat({
+        artists: filteredArtists,
+        name: matchedTrack.title,
+        id: apiTrack.id,
+        isrc: apiTrack.attributes.isrc,
+        addedAt: matchedTrack.addedAt
       });
+    }
 
     allTidalTracks = allTidalTracks.concat(tracks);
 
@@ -276,11 +304,14 @@ export async function getTracksFromSpotifyTracks(
     }
   }
 
+  console.log("All Tidal Tracks:", allTidalTracks);
+
   // Check if all tracks were found
   spotifyTracks.forEach((spotifyTrack) => {
     if (
       !allTidalTracks.map((track) => track.isrc).includes(spotifyTrack.isrc)
     ) {
+      notFoundTracks.concat(spotifyTrack);
       console.warn(`Track with ISRC ${spotifyTrack.isrc} was not found!`);
     }
   });
@@ -293,10 +324,10 @@ export async function getTracksFromSpotifyTracks(
   }
 
   return {
-    success: true,
-    result: allTidalTracks.sort(
+    foundTracks: allTidalTracks.sort(
       (trackA, trackB) => trackA.addedAt - trackB.addedAt
-    )
+    ),
+    notFoundTracks
   };
 }
 
@@ -305,7 +336,7 @@ export async function addTracksToLikedSongs(
   token: string,
   chunked: boolean = false,
   progress?: Progress
-): Promise<{ success: boolean; errorResult?: TidalAPIError }> {
+): Promise<void> {
   if (progress) {
     progress.text = "Adding liked tracks to Tidal";
     progress.progressBar = new ProgressBar(tracks.length);
@@ -340,7 +371,10 @@ export async function addTracksToLikedSongs(
 
     if (!response.ok) {
       const errResult: TidalAPIError = await response.json();
-      return { success: false, errorResult: errResult };
+      const firstErr = errResult.errors[0];
+      throw new Error(
+        `${errResult.errors.length} error(s) occurred. First error: (${firstErr.code}) ${firstErr.detail}`
+      );
     }
 
     if (progress) {
@@ -352,19 +386,29 @@ export async function addTracksToLikedSongs(
     progress.text = "Adding liked tracks to Tidal (DONE)";
     progress.progressBar = undefined;
   }
-
-  return { success: true };
 }
 
 export async function createPlaylistsFromSpotifyPlaylists(
   spotifyPlaylists: SpotifyPlaylist[],
   token: string,
   progress?: Progress
-): Promise<void> {
+): Promise<
+  {
+    name: string;
+    tracks: TidalTrack[];
+    notFoundTracks: SpotifyTrack[];
+  }[]
+> {
   if (progress) {
     progress.text = "Creating playlists in Tidal";
     progress.progressBar = new ProgressBar(spotifyPlaylists.length);
   }
+
+  let createdPlaylists: {
+    name: string;
+    tracks: TidalTrack[];
+    notFoundTracks: SpotifyTrack[];
+  }[] = [];
 
   for (const spotifyPlaylist of spotifyPlaylists) {
     if (progress) {
@@ -376,24 +420,18 @@ export async function createPlaylistsFromSpotifyPlaylists(
       continue;
     }
 
-    const { success, result } = await getTracksFromSpotifyTracks(
+    const result = await getTracksFromSpotifyTracks(
       spotifyPlaylist.tracks,
       token
     );
 
-    if (!success) {
-      const errResult = result as TidalAPIError;
-      errResult.errors.forEach((error) =>
-        console.error(
-          `Error while fetching tracks: (${error.code}) ${error.detail}`
-        )
-      );
-      continue;
-    }
+    const { foundTracks, notFoundTracks } = result as {
+      foundTracks: TidalTrack[];
+      notFoundTracks: SpotifyTrack[];
+    };
 
-    const tTracks = result as TidalTrack[];
-    console.log(`Searching IDs of ${tTracks.length} tracks...`);
-    const playlistData = tTracks.map((track) => ({
+    console.log(`Searching IDs of ${foundTracks.length} tracks...`);
+    const playlistData = foundTracks.map((track) => ({
       id: track.id,
       type: "tracks"
     }));
@@ -404,7 +442,7 @@ export async function createPlaylistsFromSpotifyPlaylists(
 
     const chunkSize = 20;
     let chunkCounter = 0;
-    for (let i = 0; i < tTracks.length; i += chunkSize) {
+    for (let i = 0; i < foundTracks.length; i += chunkSize) {
       const chunk = playlistData.slice(i, i + chunkSize);
       console.log(`Chunk ${++chunkCounter}...`);
       const body = { data: chunk };
@@ -426,14 +464,22 @@ export async function createPlaylistsFromSpotifyPlaylists(
         continue;
       }
     }
+
+    createdPlaylists.push({
+      name: spotifyPlaylist.name,
+      tracks: foundTracks,
+      notFoundTracks
+    });
   }
 
   if (progress) {
-    progress.text = "Creating playlists in Tidal";
+    progress.text = "Creating playlists in Tidal (DONE)";
 
     // Remove the progress bar
     progress.progressBar = undefined;
   }
+
+  return createdPlaylists;
 }
 
 export async function createPlaylist(
@@ -533,4 +579,21 @@ export async function removeAllPlaylists(req: Request, res: Response) {
   progress.text = "Deleting playlists (DONE)";
   progress.progressBar = undefined;
   progress.finish();
+}
+
+export async function getArtistData(
+  artistID: string,
+  token: string
+): Promise<TidalArtist | undefined> {
+  if (!artistsCache[artistID]) {
+    const response = await connector.get(`/artists/${artistID}`, token);
+    if (response.status === 404) {
+      return undefined;
+    }
+    const artistData = (await response.json()) as TidalAPIArtist;
+    artistsCache[artistID] = {
+      name: artistData.data.attributes.name
+    };
+  }
+  return artistsCache[artistID];
 }
