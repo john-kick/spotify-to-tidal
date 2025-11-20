@@ -11,7 +11,7 @@ import {
   getTracksFromSpotifyTracks
 } from "@/controller/tidalController";
 import type { SpotifyAPIAlbumItem, SpotifyTrack } from "@/types/spotify";
-import type { TidalAPIError, TidalTrack } from "@/types/tidal";
+import type { TidalTrack } from "@/types/tidal";
 import type Progress from "@/util/progress";
 import ProgressHandler from "@/util/progressHandler";
 import { type Request, type Response } from "express";
@@ -114,6 +114,16 @@ export async function migrate(req: Request, res: Response): Promise<void> {
 export async function result(req: Request, res: Response): Promise<void> {
   try {
     const { uuid } = req.query;
+    if (!uuid) {
+      res.status(400).send("'uuid' parameter is required.");
+      return;
+    }
+    const result = results[uuid.toString()];
+    if (!result) {
+      res.status(404).send(`No result for uuid ${uuid} found.`);
+      return;
+    }
+    res.status(200).json(result);
   } catch (err) {
     console.error(err);
     res.status(500).json(err);

@@ -111,7 +111,7 @@ function handleDeletePlaylists(event) {
     .catch((error) => console.error("Error deleting playlists:", error));
 }
 
-function trackProgress(uuid) {
+function trackProgress(uuid, redirectToResult = true) {
   const eventSource = new EventSource(`/progress?uuid=${uuid}`);
 
   const progressElement = document.createElement("div");
@@ -147,6 +147,7 @@ function trackProgress(uuid) {
 
       setTimeout(() => {
         progressElement.remove();
+        redirectToResult && (window.location.href = `/result?uuid=${uuid}`);
       }, 2000);
       return;
     }
