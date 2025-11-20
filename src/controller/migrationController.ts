@@ -124,6 +124,7 @@ export async function result(req: Request, res: Response): Promise<void> {
       return;
     }
     res.status(200).json(result);
+    // delete results[uuid.toString()];
   } catch (err) {
     console.error(err);
     res.status(500).json(err);
